@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "smart-invoice-keeper-client-side-solution",
+    "id": "41d41c03-3c98-4bd1-8a69-842bcd0d6ce7",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.20.0"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Smart Invoice Keeper description"
+      },
+      "longDescription": {
+        "default": "Smart Invoice Keeper description"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "smart-invoice-keeper Feature",
+        "description": "The feature that activates elements of the smart-invoice-keeper solution.",
+        "id": "afc6fc4c-8fbd-4bc1-8d6b-f0e85fdaf969",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/smart-invoice-keeper.sppkg"
+  }
+}

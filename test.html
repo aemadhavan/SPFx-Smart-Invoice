@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Invoice</title>
+    <style>
+        .invoice-header {
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            border: 1px solid #000;
+            margin: 20px;
+            background: #fff;
+        }
+
+        .logo-container {
+            width: 120px;
+            height: 60px;
+            background: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 20px;
+        }
+
+        .logo-text {
+            color: white;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.2;
+        }
+
+        .invoice-title {
+            font-size: 24px;
+            color: #333;
+            font-weight: normal;
+        }
+
+        /* New styles for the details section */
+        .invoice-details-container {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            margin: 0 20px;
+            border: 1px solid #000;
+            border-top: none;
+        }
+
+        .company-details, .invoice-details {
+            line-height: 1.6;
+        }
+
+        .company-details {
+            text-align: left;
+        }
+
+        .invoice-details {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-header">
+        <div class="logo-container">
+            <div class="logo-text">
+                Company<br>
+                Logo
+            </div>
+        </div>
+        <h1 class="invoice-title">Customer Invoice</h1>
+    </div>
+    
+    <div class="invoice-details-container">
+        <div class="company-details">
+            Accounting House (Akl) Limited<br/>
+            65, Mc Fadzean Drive<br/>
+            Blockhouse Bay<br/>
+            Auckland 0600<br/>
+            Tel: 09 - 627 0343<br/>
+            email: gru@xtra.co.nz
+        </div>
+        <div class="invoice-details">
+            Invoice# 123456789<br/>
+            GST No# 083-800-240<br/>
+            Date: 01/01/2022<br/>
+            Due Date: 31/01/2022
+        </div>
+    </div>
+</body>
+</html>

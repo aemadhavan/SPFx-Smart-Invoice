@@ -1,0 +1,21 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "18.20.4",
+    "sdksVersions": {
+      "@microsoft/microsoft-graph-client": "3.0.2",
+      "@microsoft/teams-js": "2.24.0"
+    },
+    "version": "1.20.0",
+    "libraryName": "smart-invoice-keeper",
+    "libraryId": "41d41c03-3c98-4bd1-8a69-842bcd0d6ce7",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "Smart Invoice Keeper",
+    "solutionShortDescription": "Smart Invoice Keeper description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "componentType": "webpart"
+  }
+}
