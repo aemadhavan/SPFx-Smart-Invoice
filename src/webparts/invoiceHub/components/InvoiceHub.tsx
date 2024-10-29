@@ -21,6 +21,7 @@ import { Document24Regular, AddRegular, Search24Regular} from '@fluentui/react-i
 import { useInvoices } from '../hooks/useInvoices';
 import { CreateInvoiceDrawer, IInvoiceFormData } from './CreateInvoiceDrawer';
 
+
 // Define custom styles
 const useStyles = makeStyles({
   container: {
@@ -76,6 +77,7 @@ const useStyles = makeStyles({
     }
   }
 });
+
 
 export interface IInvoice {
   Id: number;
@@ -244,6 +246,7 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
         isOpen={isDrawerOpen}
         onDismiss={handleDrawerDismiss}
         onSubmit={handleInvoiceSubmit}
+        sp={props.sp}
       />
     </FluentProvider>
   );

@@ -16,12 +16,22 @@ import {
   Field,
 } from '@fluentui/react-components';
 import { Add24Regular, Dismiss24Regular } from '@fluentui/react-icons';
+import { SPFI } from "@pnp/sp";
+import { useInvoiceConfig } from '../hooks/useInvoiceConfig';
 
 interface ICreateInvoiceDrawerProps {
   isOpen: boolean;
   onDismiss: () => void;
   onSubmit: (data: IInvoiceFormData) => void;
+  sp: SPFI;
 }
+// Add this interface to your existing interfaces
+interface IInvoiceItem {
+  id: string;
+  description: string;
+  amount: number;
+}
+
 
 export interface IInvoiceFormData {
   invoiceNumber: string;
@@ -44,8 +54,7 @@ export interface IInvoiceFormData {
   customerPhone: string;
   customerEmail: string;
   // Invoice Items
-  description: string;
-  amount: number;
+  items: IInvoiceItem[]; 
   // Bank Details
   bankName: string;
   accountNumber: string;
@@ -61,6 +70,18 @@ const useStyles = makeStyles({
     display: 'flex',
     flexDirection: 'column',
     //gap: '20px',
+  },
+  labelTitle: {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: tokens.colorNeutralForeground2,
+    marginBottom: '4px',
+  },
+  labelText: {
+    fontSize: '14px',
+    color: tokens.colorNeutralForeground1,
+    padding: '5px 0',
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
   },
   invoiceDetails: {
     display: 'grid',
@@ -82,13 +103,26 @@ const useStyles = makeStyles({
     //marginBottom: '16px',
   },
   itemsSection: {
-    marginBottom: '24px',
+    margin: '24px 0',
+  },
+  sectionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
   },
   itemRow: {
     display: 'grid',
     gridTemplateColumns: '2fr 1fr auto',
     gap: '16px',
     alignItems: 'start',
+    //marginBottom: '16px',
+    padding: '8px',
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: '4px',
+    '&:hover': {
+      backgroundColor: tokens.colorNeutralBackground3,
+    }
   },
   formField: {
     display: 'flex',
@@ -130,14 +164,27 @@ const useStyles = makeStyles({
     },
   }
 });
+// Function to get today's date in YYYY-MM-DD format
+const getTodayDate = (): string => {
+  const today = new Date();
+  return today.toLocaleDateString('en-CA');//.split('T')[0];
+};
+// Function to get date 7 days from today in YYYY-MM-DD format
+const getDueDate = (): string => {
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 7);
+  console.log(dueDate.toISOString().split('T')[0]);
+  return dueDate.toLocaleDateString('en-CA');//.split('T')[0];
+};
 
 export const CreateInvoiceDrawer: React.FC<ICreateInvoiceDrawerProps> = (props) => {
-  const { isOpen, onDismiss, onSubmit } = props;
+  const { isOpen, onDismiss, onSubmit, sp } = props;
   const styles = useStyles();
+
   const [formData, setFormData] = React.useState<IInvoiceFormData>({
-    invoiceNumber: 'AHL-0116/2024',
-    invoiceDate: '',
-    dueDate: '',
+    invoiceNumber: '',
+    invoiceDate: getTodayDate(),
+    dueDate: getDueDate(),
     companyName: 'Accounting House (Akl) Limited',
     streetAddress: '65, Mc Fadzean Drive',
     suburb: 'Blockhouse Bay',
@@ -152,39 +199,121 @@ export const CreateInvoiceDrawer: React.FC<ICreateInvoiceDrawerProps> = (props) 
     customerPostalCode: '',
     customerPhone: '',
     customerEmail: '',
-    description: '',
-    amount: 0,
+    items: [{
+      id: '1',
+      description: '',
+      amount: 0
+    }],
     bankName: 'ANZ New Lynn',
     accountNumber: '01-0186-0460792-00',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Use the new invoice config hook
+const {
+  invoiceNumber,
+  isLoading,
+  error,
+  getInvoiceNumber,
+  incrementInvoiceNumber
+} = useInvoiceConfig(sp);
+
+// Update formData when invoiceNumber changes
+React.useEffect(() => {
+  if (invoiceNumber) {
+    setFormData(prev => ({ ...prev, invoiceNumber }));
+  }
+}, [invoiceNumber]);
+// Load invoice number when drawer opens
+React.useEffect(() => {
+  if (isOpen) {
+    getInvoiceNumber();
+  }
+}, [isOpen, getInvoiceNumber]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    try {
+      onSubmit(formData);
+      await incrementInvoiceNumber();
+    } catch (err) {
+      console.error('Error submitting invoice:', err);
+      // Handle error appropriately
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
      const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
    };
+    
+   // Add function to handle item changes
+  const handleItemChange = (id: string, field: 'description' | 'amount', value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.map(item => 
+        item.id === id 
+          ? { ...item, [field]: value }
+          : item
+      )
+    }));
+  };
+
+ // Add function to add new item
+  const handleAddItem = () => {
+    setFormData(prev => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          id: Date.now().toString(), // Simple way to generate unique id
+          description: '',
+          amount: 0
+        }
+      ]
+    }));
+  };
+     // Add function to remove item
+  const handleRemoveItem = (id: string) => {
+    if (formData.items.length === 1) return; // Prevent removing last item
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter(item => item.id !== id)
+    }));
+  };
+  
+  
 
   //const handleCustomerChange = (_: any, data: { value: string }) => {
   //  setFormData(prev => ({ ...prev, customer: data.value }));
   //};
-  const calculateGST = (amount: number): number => {
-    return amount * 0.15;
+  // Update total calculations
+  const calculateSubTotal = (): number => {
+    return formData.items.reduce((sum, item) => sum + (item.amount || 0), 0);
   };
 
-  const calculateTotal = (amount: number): number => {
-    return amount + calculateGST(amount);
+  const calculateGST = (): number => {
+    return calculateSubTotal() * 0.15;
   };
+
+  const calculateTotal = (): number => {
+    return calculateSubTotal() + calculateGST();
+  };
+// Show loading state
+if (isLoading && !formData.invoiceNumber) {
+  return <div>Loading...</div>;
+}
+
+// Show error state
+if (error) {
+  return <div>Error loading invoice number: {error.message}</div>;
+}
 
   return (
     <OverlayDrawer
       open={isOpen}
       position="end"
       className={styles.drawer}
-      style={{ width: '900px' }}>
+      style={{ width: '700px' }}>
     
       <DrawerHeader className={styles.header}>
         <DrawerHeaderTitle action={<Button appearance='subtle' aria-label='Close' icon={<Dismiss24Regular/>} onClick={onDismiss}/>}>Create New Invoice</DrawerHeaderTitle>
@@ -194,7 +323,7 @@ export const CreateInvoiceDrawer: React.FC<ICreateInvoiceDrawerProps> = (props) 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.invoiceDetails}>
             <Field label="Invoice Number" required className={styles.formField}>
-              <Input name="invoiceNumber" value={formData.invoiceNumber} onChange={handleInputChange} required />
+              <Input name="invoiceNumber" value={formData.invoiceNumber} onChange={handleInputChange} required readOnly/>
             </Field>
             <Field label="Invoice Date" required>
               <Input name="invoiceDate" type="date" value={formData.invoiceDate} onChange={handleInputChange} required />                
@@ -207,18 +336,18 @@ export const CreateInvoiceDrawer: React.FC<ICreateInvoiceDrawerProps> = (props) 
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>Company Details</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap:'5px' }}>
-                  <Input name="companyName" value={formData.companyName} readOnly />
-                  <Input name="streetAddress" value={formData.streetAddress} readOnly />
-                  <Input name="suburb" value={formData.suburb} readOnly />
-                  <Input name="city" value={formData.city} readOnly />
-                  <Input name="phone" value={formData.phone} readOnly />
-                  <Input name="email" value={formData.email} readOnly />
-                  <Input name="gst" value={formData.gst} readOnly />
+                  <div>{formData.companyName}</div>
+                  <div>{formData.streetAddress} </div>
+                  <div>{formData.suburb}</div>
+                  <div>{formData.city}</div>
+                  <div>{formData.phone}</div>
+                  <div>{formData.email} </div>
+                  <div>{formData.gst}</div>
               </div>
             </div>
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>Customer Details</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap:'5px'}}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap:'2px'}}>
                   <Input name="customerName" value={formData.customerName} onChange={handleInputChange} placeholder='Customer Name' />
                   <Input name="customerStreetAddress" value={formData.customerStreetAddress} onChange={handleInputChange} placeholder='Street Address' />
                   <Input name="customerSuburb" value={formData.customerSuburb} onChange={handleInputChange} placeholder='Suburb' />
@@ -229,52 +358,60 @@ export const CreateInvoiceDrawer: React.FC<ICreateInvoiceDrawerProps> = (props) 
               </div>
             </div>
           </div>
-          {/* Invoice Items */}
+          {/* Invoice Items Section */}
           <div className={styles.itemsSection}>
-            <h3 className={styles.sectionTitle}>Invoice Items</h3>
-            <div className={styles.itemRow}>
-              <Field label="Description" required>
-                <Input
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                />
-              </Field>
-              <Field label="Amount (NZ$)" required>
-                <Input
-                  name="amount"
-                  type="number"
-                  //value={formData.amount}
-                  onChange={handleInputChange}
-                />
-              </Field>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>Invoice Items</h3>
               <Button 
                 icon={<Add24Regular />}
-                style={{ marginTop: '24px' }}
+                onClick={handleAddItem}
+                appearance="transparent"
               >
                 Add Item
               </Button>
             </div>
+
+            {formData.items.map((item) => (
+              <div key={item.id} className={styles.itemRow}>
+              <Field label="Description" required>
+                <Input
+                  value={item.description}
+                  onChange={(e) => handleItemChange(item.id, 'description', e.target.value)}
+                />
+              </Field>
+              <Field label="Amount (NZ$)" required>
+                <Input
+                  type="number"
+                  value={item.amount.toString()}
+                  onChange={(e) => handleItemChange(item.id, 'amount', Number(e.target.value) || 0)}
+                />
+              </Field>
+              {formData.items.length > 1 && (
+                <Button 
+                  icon={<Dismiss24Regular />}
+                  appearance="transparent"
+                  style={{ marginTop: '24px' }}
+                  onClick={() => handleRemoveItem(item.id)}
+                />
+              )}
+            </div>
+            ))}
           </div>
           {/* Totals */}
           <div className={styles.totalsSection}>
             <div>Total exclusive of GST:</div>
-            <div>${formData.amount}</div>
+            <div>${calculateSubTotal().toFixed(2)}</div>
             <div>GST (15%):</div>
-            <div>${calculateGST(formData.amount)}</div>
+            <div>${calculateGST().toFixed(2)}</div>
             <div style={{ fontWeight: 'bold' }}>Total inclusive of GST:</div>
-            <div style={{ fontWeight: 'bold' }}>${calculateTotal(formData.amount)}</div>
+            <div style={{ fontWeight: 'bold' }}>${calculateTotal().toFixed(2)}</div>
           </div>
            {/* Bank Details */}
            <div className={styles.section}>
             <h3 className={styles.sectionTitle}>Bank Account Details</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <Field label="Bank Name">
-                <Input name="bankName" value={formData.bankName} readOnly />
-              </Field>
-              <Field label="Account Number">
-                <Input name="accountNumber" value={formData.accountNumber} readOnly />
-              </Field>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>              
+                <div>{formData.bankName}</div>              
+                <div>{formData.accountNumber}</div>              
             </div>
           </div>
         </form>
