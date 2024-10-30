@@ -65,6 +65,15 @@ const useStyles = makeStyles({
   tableCell: {
     padding: '8px 12px',
   },
+  tableCellHeadAmount: {
+    padding: '8px 12px',
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  tableCellAmount: {
+    padding: '8px 12px',
+    textAlign: 'right',
+  },
   fileIcon: {
     fontSize: '20px',
     color: '#666'
@@ -101,7 +110,7 @@ const formatCurrency = (amount: number | null | undefined): string => {
 };
 
 export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
-  const { invoices, loading, error } = useInvoices(props.sp, props.listName);
+  const { invoices, loading, error,refreshInvoices  } = useInvoices(props.sp, props.listName);
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const styles = useStyles();
@@ -121,6 +130,11 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
       // Add your logic to save the invoice
       console.log('Saving invoice:', data);
       setIsDrawerOpen(false);
+      // Wait a moment to ensure the file is uploaded
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Refresh the dashboard
+      await refreshInvoices();
     } catch (error) {
       console.error('Error saving invoice:', error);
     }
@@ -153,13 +167,18 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
   const formatDate = (dateString: string): string => {
     if (!dateString) return '';
     try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', {
+      // Create date object from UTC string
+      const utcDate = new Date(dateString);
+      
+      // Format date in NZ timezone
+      return utcDate.toLocaleDateString('en-NZ', {
+        timeZone: 'Pacific/Auckland',
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
       }).replace(/\//g, '/');
-    } catch {
+    } catch (error) {
+      console.error('Error formatting date:', error);
       return '';
     }
   };
@@ -198,7 +217,13 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
               {columns.map((column: ITableColumn) => (
                 <TableCell 
                   key={column.columnKey}
-                  className={column.columnKey === 'file' ? styles.iconCell : styles.tableCellHead}
+                  className={
+                    column.columnKey === 'file' 
+                      ? styles.iconCell 
+                      : column.columnKey === 'totalAmount'
+                        ? styles.tableCellHeadAmount
+                        : styles.tableCellHead
+                  }
                   style={column.width ? { width: column.width } : undefined}
                 >
                   {column.label}
@@ -225,7 +250,9 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
                 </TableCell>
                 <TableCell className={styles.tableCell}>{invoice.InvoiceNumber}</TableCell>
                 <TableCell className={styles.tableCell}>{invoice.CustomerName}</TableCell>
-                <TableCell className={styles.tableCell}>{formatCurrency(invoice.TotalAmount)}</TableCell>
+                <TableCell className={styles.tableCellAmount}>
+                  {formatCurrency(invoice.TotalAmount)}
+                </TableCell>
                 <TableCell className={styles.tableCell}>{formatDate(invoice.InvoiceDate)}</TableCell>
               </TableRow>
             ))}
@@ -234,7 +261,7 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
               <TableCell colSpan={3} style={{ textAlign: 'right' }} className={styles.tableCell}>
                 <strong>Sum</strong>
               </TableCell>
-              <TableCell className={styles.tableCell}>
+              <TableCell className={styles.tableCellAmount}>
                 <strong>{formatCurrency(calculateFilteredTotal())}</strong>
               </TableCell>
               <TableCell className={styles.tableCell} />
