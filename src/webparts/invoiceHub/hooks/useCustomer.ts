@@ -13,7 +13,7 @@ export interface ICustomer {
 }
 
 // Function to check if customer exists and create if not
-export const manageCustomer = async (sp: SPFI, customerData: ICustomer): Promise<void> => {
+export const manageCustomer = async (sp: SPFI, customerData: ICustomer,customerListName:string): Promise<void> => {
   try {
     // Check if customer exists by email
     const existingCustomers = await sp.web.lists
@@ -24,7 +24,7 @@ export const manageCustomer = async (sp: SPFI, customerData: ICustomer): Promise
     // If customer doesn't exist, create new customer
     if (existingCustomers.length === 0) {
       await sp.web.lists
-        .getByTitle("Customer")
+        .getByTitle(customerListName)
         .items
         .add({
           Title: customerData.CustomerName,

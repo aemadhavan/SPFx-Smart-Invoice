@@ -110,7 +110,7 @@ const formatCurrency = (amount: number | null | undefined): string => {
 };
 
 export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
-  const { invoices, loading, error,refreshInvoices  } = useInvoices(props.sp, props.listName);
+  const { invoices, loading, error,refreshInvoices  } = useInvoices(props.sp, props.libraryName);
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const styles = useStyles();
@@ -274,6 +274,8 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
         onDismiss={handleDrawerDismiss}
         onSubmit={handleInvoiceSubmit}
         sp={props.sp}
+        invoiceLibraryName={props.libraryName}
+        customerListName={props.listName}
       />
     </FluentProvider>
   );

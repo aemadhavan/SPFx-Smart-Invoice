@@ -17,9 +17,7 @@ interface IInvoiceMetadata {
 }
 
 export const generateInvoicePDF = async (
-  formData: IInvoiceFormData,
-  sp: SPFI
-): Promise<void> => {
+formData: IInvoiceFormData, sp: SPFI, invoiceLibraryName: string): Promise<void> => {
   try {
     // Create PDF
     const doc = new jsPDF();
@@ -139,7 +137,7 @@ export const generateInvoicePDF = async (
     };
 
     // Upload to SharePoint
-    await uploadPDFToSharePoint(sp, fileName, pdfData, metadata);
+    await uploadPDFToSharePoint(sp, invoiceLibraryName,fileName, pdfData, metadata);
 
   } catch (error) {
     console.error('Error generating/uploading PDF:', error);
@@ -149,6 +147,7 @@ export const generateInvoicePDF = async (
 
 const uploadPDFToSharePoint = async (
   sp: SPFI,
+  invoiceLibraryName: string,
   fileName: string,
   pdfData: ArrayBuffer,
   metadata: IInvoiceMetadata
@@ -163,7 +162,7 @@ const uploadPDFToSharePoint = async (
     const fileServerRelativeUrl = result.ServerRelativeUrl;
     const item = await sp.web.getFileByServerRelativePath(fileServerRelativeUrl).listItemAllFields();
 
-    await sp.web.lists.getByTitle('Documents').items.getById(item.Id).update(metadata);
+    await sp.web.lists.getByTitle(invoiceLibraryName).items.getById(item.Id).update(metadata);
     console.log(`File ${fileName} uploaded successfully with metadata`);
 
   } catch (error) {

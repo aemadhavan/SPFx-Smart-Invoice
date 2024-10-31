@@ -28,6 +28,8 @@ interface ICreateInvoiceDrawerProps {
   onDismiss: () => void;
   onSubmit: (data: IInvoiceFormData) => void;
   sp: SPFI;
+  invoiceLibraryName:string;
+  customerListName:string;
 }
 // Add this interface to your existing interfaces
 interface IInvoiceItem {
@@ -198,7 +200,7 @@ const getDueDate = (invoiceDate:string): string => {
 };
 
 export const CreateInvoiceDrawer: React.FC<ICreateInvoiceDrawerProps> = (props) => {
-  const { isOpen, onDismiss, onSubmit, sp } = props;
+  const { isOpen, onDismiss, onSubmit, sp, invoiceLibraryName, customerListName } = props;
   const styles = useStyles();
   // Initialize dates once when drawer opens
   const [initialDates] = React.useState(() => {
@@ -274,10 +276,10 @@ React.useEffect(() => {
         Status: 'Active'
       };
 
-      await manageCustomer(sp, customerData);
+      await manageCustomer(sp, customerData,customerListName);
     }
       // First, generate and upload PDF
-      await generateInvoicePDF(formData, sp);
+      await generateInvoicePDF(formData, sp,invoiceLibraryName);
       await incrementInvoiceNumber();
       onSubmit(formData);
       

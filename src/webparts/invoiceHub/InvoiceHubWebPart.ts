@@ -15,7 +15,7 @@ import { IInvoiceHubProps } from './components/IInvoiceHubProps';
 
 export interface IInvoiceHubWebPartProps {
   listName: string;
-  libraryName: string;
+  invoiceLibraryName: string;
 }
 
 export default class InvoiceHubWebPart extends BaseClientSideWebPart<IInvoiceHubWebPartProps> {
@@ -24,11 +24,11 @@ export default class InvoiceHubWebPart extends BaseClientSideWebPart<IInvoiceHub
   public render(): void {
     const element: React.ReactElement<IInvoiceHubProps> = React.createElement(
       InvoiceHub,
-      {
-        listName: this.properties.listName,
+      {        
         sp: this._sp,
         context: this.context,
-        libraryName: this.properties.libraryName
+        listName: this.properties.listName,
+        libraryName: this.properties.invoiceLibraryName,
       }
     );
 
@@ -74,7 +74,7 @@ export default class InvoiceHubWebPart extends BaseClientSideWebPart<IInvoiceHub
                   label: strings.ListNameFieldLabel
                 }),
                 PropertyPaneTextField('libraryName', {
-                  label: 'Document Library Name'
+                  label: 'Invoice Document Library Name'
                 })
               ]
             }
