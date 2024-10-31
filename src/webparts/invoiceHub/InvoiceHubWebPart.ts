@@ -68,13 +68,13 @@ export default class InvoiceHubWebPart extends BaseClientSideWebPart<IInvoiceHub
           },
           groups: [
             {
-              groupName: strings.ListName,
+              //groupName: strings.ListName,
               groupFields: [
                 PropertyPaneTextField('listName', {
-                  label: strings.ListNameFieldLabel
+                  label: strings.ListName
                 }),
-                PropertyPaneTextField('libraryName', {
-                  label: 'Invoice Document Library Name'
+                PropertyPaneTextField('invoiceLibraryName', {
+                  label: strings.LibraryName
                 })
               ]
             }

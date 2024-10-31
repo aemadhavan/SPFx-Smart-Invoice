@@ -2,6 +2,7 @@ declare interface IInvoiceHubWebPartStrings {
   PropertyPaneDescription: string;
   BasicGroupName: string;
   ListName: string;
+  LibraryName: string;
   ListNameFieldLabel: string;
   AppLocalEnvironmentSharePoint: string;
   AppLocalEnvironmentTeams: string;
