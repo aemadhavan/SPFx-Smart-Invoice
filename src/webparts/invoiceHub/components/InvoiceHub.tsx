@@ -276,6 +276,7 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
         sp={props.sp}
         invoiceLibraryName={props.libraryName}
         customerListName={props.listName}
+        context={props.context}
       />
     </FluentProvider>
   );

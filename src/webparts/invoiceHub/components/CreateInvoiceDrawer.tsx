@@ -22,6 +22,8 @@ import { SPFI } from "@pnp/sp";
 import { useInvoiceConfig } from '../hooks/useInvoiceConfig';
 import { generateInvoicePDF } from './GenerateInvoicePDF';
 import {ICustomer, manageCustomer} from '../hooks/useCustomer'
+import { sendEmailWithAttachment } from './emailService';
+import { WebPartContext } from '@microsoft/sp-webpart-base';
 
 interface ICreateInvoiceDrawerProps {
   isOpen: boolean;
@@ -30,6 +32,7 @@ interface ICreateInvoiceDrawerProps {
   sp: SPFI;
   invoiceLibraryName:string;
   customerListName:string;
+  context:WebPartContext
 }
 // Add this interface to your existing interfaces
 interface IInvoiceItem {
@@ -200,7 +203,7 @@ const getDueDate = (invoiceDate:string): string => {
 };
 
 export const CreateInvoiceDrawer: React.FC<ICreateInvoiceDrawerProps> = (props) => {
-  const { isOpen, onDismiss, onSubmit, sp, invoiceLibraryName, customerListName } = props;
+  const { isOpen, onDismiss, onSubmit, sp, invoiceLibraryName, customerListName,context } = props;
   const styles = useStyles();
   // Initialize dates once when drawer opens
   const [initialDates] = React.useState(() => {
@@ -260,34 +263,48 @@ React.useEffect(() => {
   }
 }, [isOpen, getInvoiceNumber]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
       // First, manage customer data
-    if (formData.customerEmail) {  // Only proceed if email is provided
-      const customerData: ICustomer = {
-        CustomerName: formData.customerName,
-        StreetAddress: formData.customerStreetAddress,
-        Suburb: formData.customerSuburb,
-        City: formData.customerCity,
-        Pin: formData.customerPostalCode,
-        Email: formData.customerEmail,
-        Phone: formData.customerPhone,
-        Status: 'Active'
-      };
+      if (formData.customerEmail) {
+          const customerData: ICustomer = {
+              CustomerName: formData.customerName,
+              StreetAddress: formData.customerStreetAddress,
+              Suburb: formData.customerSuburb,
+              City: formData.customerCity,
+              Pin: formData.customerPostalCode,
+              Email: formData.customerEmail,
+              Phone: formData.customerPhone,
+              Status: 'Active'
+          };
 
-      await manageCustomer(sp, customerData,customerListName);
-    }
-      // First, generate and upload PDF
-      await generateInvoicePDF(formData, sp,invoiceLibraryName);
-      await incrementInvoiceNumber();
-      onSubmit(formData);
-      
-    } catch (err) {
+          // 1. Save customer data
+          await manageCustomer(sp, customerData, customerListName);
+
+          // 2. Generate and upload PDF
+          await generateInvoicePDF(formData, sp, invoiceLibraryName);
+
+          // 3. Send email with attachment
+          await sendEmailWithAttachment(formData, sp, invoiceLibraryName,context);
+
+          // 4. Increment invoice number
+          await incrementInvoiceNumber();
+
+          // 5. Call onSubmit and close drawer
+          onSubmit(formData);
+          onDismiss();
+
+          // 6. Show success message
+          alert('Invoice created and sent successfully!');
+      } else {
+          alert('Customer email is required to send invoice.');
+      }
+  } catch (err) {
       console.error('Error submitting invoice:', err);
-      // Handle error appropriately
-    }
-  };
+      alert('Error creating invoice: ' + (err instanceof Error ? err.message : String(err)));
+  }
+};
   // Updated date change handler
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -343,7 +360,6 @@ React.useEffect(() => {
     }));
   };
   
-
   //const handleCustomerChange = (_: any, data: { value: string }) => {
   //  setFormData(prev => ({ ...prev, customer: data.value }));
   //};

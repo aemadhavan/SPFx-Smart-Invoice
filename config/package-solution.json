@@ -3,7 +3,7 @@
   "solution": {
     "name": "smart-invoice-keeper-client-side-solution",
     "id": "41d41c03-3c98-4bd1-8a69-842bcd0d6ce7",
-    "version": "1.0.0.0",
+    "version": "1.0.0.2",
     "includeClientSideAssets": true,
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
@@ -25,6 +25,20 @@
       "videoUrl": "",
       "categories": []
     },
+    "webApiPermissionRequests": [
+      {
+        "resource": "Microsoft Graph",
+        "scope": "Mail.Send"
+      },
+      {
+        "resource": "Microsoft Graph",
+        "scope": "Mail.ReadWrite"
+      },
+      {
+        "resource": "Microsoft Graph",
+        "scope": "User.Read"
+      }
+    ],
     "features": [
       {
         "title": "smart-invoice-keeper Feature",

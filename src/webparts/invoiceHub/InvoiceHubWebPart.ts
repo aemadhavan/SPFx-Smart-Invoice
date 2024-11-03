@@ -6,7 +6,7 @@ import {
   PropertyPaneTextField,
   //PropertyPaneDropdown
 } from '@microsoft/sp-property-pane';
-import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
+import { BaseClientSideWebPart} from '@microsoft/sp-webpart-base';
 import { IReadonlyTheme } from '@microsoft/sp-component-base';
 import { SPFI, spfi, SPFx } from "@pnp/sp";
 import * as strings from 'InvoiceHubWebPartStrings';
