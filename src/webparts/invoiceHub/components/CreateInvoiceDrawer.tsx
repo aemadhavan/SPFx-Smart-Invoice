@@ -66,6 +66,7 @@ export interface IInvoiceFormData {
   // Bank Details
   bankName: string;
   accountNumber: string;
+  paymentTerms:string;
 }
 
 const useStyles = makeStyles({
@@ -218,13 +219,13 @@ export const CreateInvoiceDrawer: React.FC<ICreateInvoiceDrawerProps> = (props) 
     invoiceNumber: '',
     invoiceDate:  initialDates.invoiceDate,
     dueDate:  initialDates.dueDate,
-    companyName: 'Accounting House (Akl) Limited',
-    streetAddress: '65, Mc Fadzean Drive',
-    suburb: 'Blockhouse Bay',
-    city: 'Auckland, 0600',
-    phone: 'Tel: 09 - 627 0343',
-    email: 'gru@xtra.co.nz',
-    gst: '083-800-240',
+    companyName: '',
+    streetAddress: '',
+    suburb: '',
+    city: '',
+    phone: '',
+    email: '',
+    gst: '',
     customerName: '',
     customerStreetAddress: '',
     customerSuburb: '',
@@ -237,8 +238,9 @@ export const CreateInvoiceDrawer: React.FC<ICreateInvoiceDrawerProps> = (props) 
       description: '',
       amount: 0
     }],
-    bankName: 'ANZ New Lynn',
-    accountNumber: '01-0186-0460792-00',
+    bankName: '',
+    accountNumber: '',
+    paymentTerms:''
   });
 
   // Use the new invoice config hook
@@ -246,6 +248,8 @@ const {
   invoiceNumber,
   isLoading,
   error,
+  config,
+  getConfig,
   getInvoiceNumber,
   incrementInvoiceNumber
 } = useInvoiceConfig(sp);
@@ -256,12 +260,34 @@ React.useEffect(() => {
     setFormData(prev => ({ ...prev, invoiceNumber }));
   }
 }, [invoiceNumber]);
+
+// Update formData when config changes
+React.useEffect(() => {
+  console.log("config",config)
+  if (config) {
+    setFormData(prev => ({
+      ...prev,
+      companyName: config.CompanyName,
+      streetAddress: config.CompanyAddress,
+      suburb: config.Suburb,
+      city: config.City,
+      phone: config.CompanyTel,
+      email: config.CompanyEmail,
+      gst: config.GSTNo,
+      bankName: config.BankName,
+      accountNumber: config.BankAccountNo,
+      paymentTerms: config.PaymentTerms
+    }));
+  }
+}, [config]);
+
 // Load invoice number when drawer opens
 React.useEffect(() => {
   if (isOpen) {
     getInvoiceNumber();
+    getConfig();
   }
-}, [isOpen, getInvoiceNumber]);
+}, [isOpen, getInvoiceNumber,getConfig]);
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
@@ -375,8 +401,8 @@ const handleSubmit = async (e: React.FormEvent) => {
   const calculateTotal = (): number => {
     return calculateSubTotal() + calculateGST();
   };
-// Show loading state
-if (isLoading && !formData.invoiceNumber) {
+ // Show loading state
+ if ((isLoading || !config) && isOpen) {
   return <div>Loading...</div>;
 }
 
@@ -489,7 +515,8 @@ if (error) {
                     <h3 className={styles.sectionTitle}>Bank Account Details</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>              
                         <div>{formData.bankName}</div>              
-                        <div>{formData.accountNumber}</div>              
+                        <div>{formData.accountNumber}</div>
+                        <div>{formData.paymentTerms}</div>              
                     </div>
                   </div>
                 </form>
