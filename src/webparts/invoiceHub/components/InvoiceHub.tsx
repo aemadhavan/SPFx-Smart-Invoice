@@ -64,22 +64,44 @@ const useStyles = makeStyles({
     width: '40px',
     padding: '0 4px',
     textAlign: 'center',
-    opacity: 0,
-    transition: 'opacity 0.2s',
-    '&:hover': {
-      opacity: 1
+    '& .radio-button': {
+      // Remove opacity transition to keep radio button always visible
+      opacity: 1,
+      position: 'relative',
+      zIndex: 1
     }
   },
   tableRow: {
-    '&:hover .radioCell': {
-      opacity: 1
-    }
+    position: 'relative',
+    transition: 'background-color 0.2s ease-in-out',
   },
   selectedRow: {
-    backgroundColor: tokens.colorNeutralBackground3,
+    backgroundColor: `${tokens.colorNeutralBackground3} !important`,
     '& td': {
-      backgroundColor: tokens.colorNeutralBackground3,
+      backgroundColor: `${tokens.colorNeutralBackground3} !important`,
+    },
+    '& .radio-button': {
+      opacity: 1
+    },
+    '&:hover': {
+      backgroundColor: `${tokens.colorNeutralBackground3} !important`,
+      '& td': {
+        backgroundColor: `${tokens.colorNeutralBackground3} !important`,
+      }
     }
+  },
+  hoverRow: {
+    '&:hover': {
+      '&:not(.selectedRow)': {
+        backgroundColor: tokens.colorNeutralBackground2,
+        '& td': {
+          backgroundColor: tokens.colorNeutralBackground2,
+        }
+      }
+    }
+  },
+  tableCellSelected: {
+    backgroundColor: `${tokens.colorNeutralBackground3} !important`,
   },
   tableCellHead: {
     padding: '8px 12px',
@@ -286,43 +308,49 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredInvoices.map((invoice: IInvoice) => {
-               const isSelected = selectedInvoiceId === invoice.Id;
-              return(
-              <TableRow key={invoice.Id} className={`${styles.tableRow} ${isSelected ? styles.selectedRow : ''}`}>
-                <TableCell 
-                  className={`${styles.radioCell} radioCell`}
-                  style={{ opacity: isSelected ? 1 : undefined }}
+          {filteredInvoices.map((invoice: IInvoice) => {
+              const isSelected = selectedInvoiceId === invoice.Id;
+              return (
+                <TableRow 
+                  key={invoice.Id} 
+                  className={`${styles.tableRow} ${styles.hoverRow} ${isSelected ? styles.selectedRow : ''}`}
                 >
-                  
-                  <Radio 
-                    checked={isSelected}
-                    onClick={() => handleRadioClick(invoice.Id)}
-                    aria-label={`Select invoice ${invoice.InvoiceNumber}`}
-                  />
-                  
-                </TableCell>
-                <TableCell className={styles.iconCell}>
-                  <TableCellLayout>
-                    <Document24Regular className={styles.fileIcon} />
-                  </TableCellLayout>
-                </TableCell>
-                <TableCell className={styles.tableCell}>
-                  <a href={invoice.FileRef} 
-                     target="_blank" 
-                     rel="noopener noreferrer"
-                     className={styles.link}>
-                    {invoice.FileLeafRef}
-                  </a>
-                </TableCell>
-                <TableCell className={styles.tableCell}>{invoice.InvoiceNumber}</TableCell>
-                <TableCell className={styles.tableCell}>{invoice.CustomerName}</TableCell>
-                <TableCell className={styles.tableCellAmount}>
-                  {formatCurrency(invoice.TotalAmount)}
-                </TableCell>
-                <TableCell className={styles.tableCell}>{formatDate(invoice.InvoiceDate)}</TableCell>
-                <TableCell className={styles.tableCell}>{invoice.Status}</TableCell>
-              </TableRow>
+                <TableCell className={`${styles.radioCell}`}>
+                    <Radio 
+                      checked={isSelected}
+                      onClick={() => handleRadioClick(invoice.Id)}
+                      aria-label={`Select invoice ${invoice.InvoiceNumber}`}
+                    />
+                  </TableCell>
+                  <TableCell className={styles.iconCell}>
+                    <TableCellLayout>
+                      <Document24Regular className={styles.fileIcon} />
+                    </TableCellLayout>
+                  </TableCell>
+                  <TableCell className={styles.tableCell}>
+                    <a href={invoice.FileRef} 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       className={styles.link}>
+                      {invoice.FileLeafRef}
+                    </a>
+                  </TableCell>
+                  <TableCell className={styles.tableCell}>
+                    {invoice.InvoiceNumber}
+                  </TableCell>
+                  <TableCell className={styles.tableCell}>
+                    {invoice.CustomerName}
+                  </TableCell>
+                  <TableCell className={styles.tableCellAmount}>
+                    {formatCurrency(invoice.TotalAmount)}
+                  </TableCell>
+                  <TableCell className={styles.tableCell}>
+                    {formatDate(invoice.InvoiceDate)}
+                  </TableCell>
+                  <TableCell className={styles.tableCell}>
+                    {invoice.Status}
+                  </TableCell>
+                </TableRow>
               );
             })}
             <TableRow>
