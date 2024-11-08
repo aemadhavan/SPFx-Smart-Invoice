@@ -15,9 +15,11 @@ import {
   //tokens,
   Button,
   Input,
-  useId
+  useId,
+  Radio,
+  tokens
 } from '@fluentui/react-components';
-import { Document24Regular, AddRegular, Search24Regular} from '@fluentui/react-icons';
+import { Document24Regular, AddRegular, Search24Regular, EditRegular} from '@fluentui/react-icons';
 import { useInvoices } from '../hooks/useInvoices';
 import { CreateInvoiceDrawer, IInvoiceFormData } from './CreateInvoiceDrawer';
 
@@ -58,6 +60,27 @@ const useStyles = makeStyles({
     padding: '0 4px',
     textAlign: 'center'
   },
+  radioCell: {
+    width: '40px',
+    padding: '0 4px',
+    textAlign: 'center',
+    opacity: 0,
+    transition: 'opacity 0.2s',
+    '&:hover': {
+      opacity: 1
+    }
+  },
+  tableRow: {
+    '&:hover .radioCell': {
+      opacity: 1
+    }
+  },
+  selectedRow: {
+    backgroundColor: tokens.colorNeutralBackground3,
+    '& td': {
+      backgroundColor: tokens.colorNeutralBackground3,
+    }
+  },
   tableCellHead: {
     padding: '8px 12px',
     fontWeight: '600',
@@ -83,7 +106,7 @@ const useStyles = makeStyles({
     textDecoration: 'none',
     '&:hover': {
       textDecoration: 'underline'
-    }
+    },    
   }
 });
 
@@ -111,9 +134,10 @@ const formatCurrency = (amount: number | null | undefined): string => {
 };
 
 export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
-  const { invoices, loading, error,refreshInvoices  } = useInvoices(props.sp, props.libraryName);
+  const {invoices, loading, error,refreshInvoices  } = useInvoices(props.sp, props.libraryName);
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = React.useState<number | null>(null);
   const styles = useStyles();
   const searchId = useId('search');
 
@@ -125,6 +149,19 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
   };
   const handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     setSearchQuery(event.target.value);
+  };
+  
+  const handleRadioClick = (invoiceId: number): void => {
+    if (selectedInvoiceId === invoiceId) {
+      setSelectedInvoiceId(null);
+    } else {
+      setSelectedInvoiceId(invoiceId);
+    }
+  };
+ 
+  const handleEditStatus = (): void => {
+    // Implement status edit functionality
+    console.log('Edit status for invoice:', selectedInvoiceId);
   };
   const handleInvoiceSubmit = async (data: IInvoiceFormData): Promise<void> => {
     try {
@@ -159,6 +196,7 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
   if (error) return <div>Error: {error}</div>;
 
   const columns = [
+    { columnKey: "select", label: "" },
     { columnKey: "file", label: "" },
     { columnKey: "name", label: "Name" },
     { columnKey: "invoiceNumber", label: "Invoice Number" },
@@ -203,15 +241,27 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
               contentBefore={<Search24Regular />}
               type="search"
             />
-            <Button 
-              appearance="primary"
-              className={styles.createButton}
-              icon={<AddRegular />}
-              onClick={handleCreateInvoice}
-              size="medium"
-            >
-              Create Invoice
-            </Button>
+            {selectedInvoiceId ? (              
+              <Button 
+                appearance="primary"
+                className={styles.createButton}
+                icon={<EditRegular />}
+                onClick={handleEditStatus}
+                size="medium"
+              >
+                Edit Status
+              </Button>
+            ) : (
+              <Button 
+                appearance="primary"
+                className={styles.createButton}
+                icon={<AddRegular />}
+                onClick={handleCreateInvoice}
+                size="medium"
+              >
+                Create Invoice
+              </Button>
+            )}
           </div>
         </div>
         <Table>
@@ -221,13 +271,13 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
                 <TableCell 
                   key={column.columnKey}
                   className={
-                    column.columnKey === 'file' 
+                    column.columnKey === 'select' || column.columnKey === 'file' 
                       ? styles.iconCell 
                       : column.columnKey === 'totalAmount'
                         ? styles.tableCellHeadAmount
                         : styles.tableCellHead
                   }
-                  style={column.width ? { width: column.width } : undefined}
+                  //style={column.width ? { width: column.width } : undefined}
                 >
                   {column.label}
                 </TableCell>
@@ -236,8 +286,22 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredInvoices.map((invoice: IInvoice) => (
-              <TableRow key={invoice.Id}>
+            {filteredInvoices.map((invoice: IInvoice) => {
+               const isSelected = selectedInvoiceId === invoice.Id;
+              return(
+              <TableRow key={invoice.Id} className={`${styles.tableRow} ${isSelected ? styles.selectedRow : ''}`}>
+                <TableCell 
+                  className={`${styles.radioCell} radioCell`}
+                  style={{ opacity: isSelected ? 1 : undefined }}
+                >
+                  
+                  <Radio 
+                    checked={isSelected}
+                    onClick={() => handleRadioClick(invoice.Id)}
+                    aria-label={`Select invoice ${invoice.InvoiceNumber}`}
+                  />
+                  
+                </TableCell>
                 <TableCell className={styles.iconCell}>
                   <TableCellLayout>
                     <Document24Regular className={styles.fileIcon} />
@@ -259,8 +323,10 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
                 <TableCell className={styles.tableCell}>{formatDate(invoice.InvoiceDate)}</TableCell>
                 <TableCell className={styles.tableCell}>{invoice.Status}</TableCell>
               </TableRow>
-            ))}
+              );
+            })}
             <TableRow>
+              <TableCell className={styles.iconCell}></TableCell>
               <TableCell className={styles.iconCell}></TableCell>
               <TableCell colSpan={3} style={{ textAlign: 'right' }} className={styles.tableCell}>
                 <strong>Sum</strong>
