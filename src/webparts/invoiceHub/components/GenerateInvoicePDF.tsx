@@ -8,6 +8,16 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { IInvoiceFormData } from "./CreateInvoiceDrawer";
 
+// Extend jsPDF type to include autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: any) => void;
+    lastAutoTable: {
+      finalY: number;
+    };
+  }
+}
+
 // Interface for PDF metadata
 interface IInvoiceMetadata {
   InvoiceNumber: string;
@@ -15,6 +25,37 @@ interface IInvoiceMetadata {
   TotalAmount: number;
   InvoiceDate: string;
 }
+// Utility function to format date from YYYY-MM-DD to DD-MM-YYYY
+const formatDate = (dateStr: string): string => {
+  const [year, month, day] = dateStr.split('-');
+  return `${day}-${month}-${year}`;
+};
+
+const uploadPDFToSharePoint = async (
+  sp: SPFI,
+  invoiceLibraryName: string,
+  fileName: string,
+  pdfData: ArrayBuffer,
+  metadata: IInvoiceMetadata
+): Promise<void> => {
+  try {
+    // Upload file to Documents library
+    const result = await sp.web.getFolderByServerRelativePath('Shared Documents')
+      .files.addUsingPath(fileName, pdfData, { Overwrite: true });
+    console.log('File uploaded to SharePoint:', result)
+    
+    // Get the item associated with the file using the proper method
+    const fileServerRelativeUrl = result.ServerRelativeUrl;
+    const item = await sp.web.getFileByServerRelativePath(fileServerRelativeUrl).listItemAllFields();
+
+    await sp.web.lists.getByTitle(invoiceLibraryName).items.getById(item.Id).update(metadata);
+    console.log(`File ${fileName} uploaded successfully with metadata`);
+
+  } catch (error) {
+    console.error('Error uploading to SharePoint:', error);
+    throw error;
+  }
+};
 
 export const generateInvoicePDF = async (
 formData: IInvoiceFormData, sp: SPFI, invoiceLibraryName: string): Promise<void> => {
@@ -54,11 +95,16 @@ formData: IInvoiceFormData, sp: SPFI, invoiceLibraryName: string): Promise<void>
       formData.customerEmail
     ], 120, 35);
 
+    // Format dates for display
+    const formattedInvoiceDate = formatDate(formData.invoiceDate);
+    const formattedDueDate = formatDate(formData.dueDate);
+
     // Invoice Details
     doc.setFontSize(10);
     doc.text(`Invoice Number: ${formData.invoiceNumber}`, 20, 80);
-    doc.text(`Invoice Date: ${formData.invoiceDate}`, 20, 85);
-    doc.text(`Due Date: ${formData.dueDate}`, 20, 90);
+    doc.text(`Invoice Date: ${formattedInvoiceDate}`, 20, 85);
+    doc.text(`Due Date: ${formattedDueDate}`, 20, 90);
+
 
     // Invoice Items with right-aligned amounts
     const tableData = formData.items.map(item => [
@@ -66,7 +112,7 @@ formData: IInvoiceFormData, sp: SPFI, invoiceLibraryName: string): Promise<void>
       { content: `$${item.amount.toFixed(2)}`, styles: { halign: 'right' } }
     ]);
 
-    // @ts-ignore (jspdf-autotable extends jsPDF prototype)
+    
     doc.autoTable({
       startY: 100,
       head: [
@@ -90,7 +136,7 @@ formData: IInvoiceFormData, sp: SPFI, invoiceLibraryName: string): Promise<void>
     });
 
     // Calculate final position for totals
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    const finalY = doc.lastAutoTable.finalY + 10;
     const totalsX = 170; // Right align position for totals
 
     // Calculate totals
@@ -119,7 +165,8 @@ formData: IInvoiceFormData, sp: SPFI, invoiceLibraryName: string): Promise<void>
     doc.setFontSize(10);
     doc.text([
       formData.bankName,
-      formData.accountNumber
+      formData.accountNumber,
+      formData.paymentTerms
     ], 20, finalY + 30);
 
     // Convert PDF to binary data
@@ -145,28 +192,3 @@ formData: IInvoiceFormData, sp: SPFI, invoiceLibraryName: string): Promise<void>
   }
 };
 
-const uploadPDFToSharePoint = async (
-  sp: SPFI,
-  invoiceLibraryName: string,
-  fileName: string,
-  pdfData: ArrayBuffer,
-  metadata: IInvoiceMetadata
-): Promise<void> => {
-  try {
-    // Upload file to Documents library
-    const result = await sp.web.getFolderByServerRelativePath('Shared Documents')
-      .files.addUsingPath(fileName, pdfData, { Overwrite: true });
-    console.log('File uploaded to SharePoint:', result)
-    
-    // Get the item associated with the file using the proper method
-    const fileServerRelativeUrl = result.ServerRelativeUrl;
-    const item = await sp.web.getFileByServerRelativePath(fileServerRelativeUrl).listItemAllFields();
-
-    await sp.web.lists.getByTitle(invoiceLibraryName).items.getById(item.Id).update(metadata);
-    console.log(`File ${fileName} uploaded successfully with metadata`);
-
-  } catch (error) {
-    console.error('Error uploading to SharePoint:', error);
-    throw error;
-  }
-};
