@@ -95,6 +95,7 @@ export interface IInvoice {
   CustomerName?: string;
   TotalAmount: number | null;
   InvoiceDate: string;
+  Status: string;
   FileRef: string;
   FileLeafRef: string;
 }
@@ -149,7 +150,8 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
       invoice.InvoiceNumber?.toLowerCase().includes(query) ||
       invoice.CustomerName?.toLowerCase().includes(query) ||
       invoice.TotalAmount?.toString().includes(query) ||
-      invoice.InvoiceDate?.toLowerCase().includes(query)
+      invoice.InvoiceDate?.toLowerCase().includes(query) ||
+      invoice.Status?.toLowerCase().includes(query)
     );
   }, [invoices, searchQuery]);
 
@@ -163,6 +165,7 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
     { columnKey: "customer", label: "Customer" },
     { columnKey: "totalAmount", label: "Total Amount" },
     { columnKey: "invoiceDate", label: "Invoice Date" },
+    { columnKey: "status", label: "Status" },
   ];
   const formatDate = (dateString: string): string => {
     if (!dateString) return '';
@@ -254,6 +257,7 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
                   {formatCurrency(invoice.TotalAmount)}
                 </TableCell>
                 <TableCell className={styles.tableCell}>{formatDate(invoice.InvoiceDate)}</TableCell>
+                <TableCell className={styles.tableCell}>{invoice.Status}</TableCell>
               </TableRow>
             ))}
             <TableRow>

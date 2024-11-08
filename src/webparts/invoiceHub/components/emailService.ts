@@ -102,7 +102,7 @@ export const sendEmailWithAttachment = async (
                 toRecipients: [
                     {
                         emailAddress: {
-                            address: formData.customerEmail // Replace with actual recipient email
+                            address: (formData.emailToCustomer)? formData.customerEmail : formData.email// Replace with actual recipient email
                         }
                     }
                 ],

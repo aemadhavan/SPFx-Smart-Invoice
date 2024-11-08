@@ -17,7 +17,7 @@ import {
   FluentProvider,
   webLightTheme,
 } from '@fluentui/react-components';
-import { Add24Regular, Dismiss24Regular } from '@fluentui/react-icons';
+import { Add24Regular, Dismiss24Regular} from '@fluentui/react-icons';
 import { SPFI } from "@pnp/sp";
 import { useInvoiceConfig } from '../hooks/useInvoiceConfig';
 import { generateInvoicePDF } from './GenerateInvoicePDF';
@@ -67,6 +67,7 @@ export interface IInvoiceFormData {
   bankName: string;
   accountNumber: string;
   paymentTerms:string;
+  emailToCustomer:boolean;
 }
 
 const useStyles = makeStyles({
@@ -240,7 +241,8 @@ export const CreateInvoiceDrawer: React.FC<ICreateInvoiceDrawerProps> = (props) 
     }],
     bankName: '',
     accountNumber: '',
-    paymentTerms:''
+    paymentTerms:'',
+    emailToCustomer: false
   });
 
   // Use the new invoice config hook
@@ -276,18 +278,30 @@ React.useEffect(() => {
       gst: config.GSTNo,
       bankName: config.BankName,
       accountNumber: config.BankAccountNo,
-      paymentTerms: config.PaymentTerms
+      paymentTerms: config.PaymentTerms,
+      emailToCustomer: config.EmailToCustomer
     }));
   }
 }, [config]);
 
-// Load invoice number when drawer opens
+// Load invoice number and config when drawer opens
 React.useEffect(() => {
-  if (isOpen) {
-    getInvoiceNumber();
-    getConfig();
-  }
-}, [isOpen, getInvoiceNumber,getConfig]);
+  const loadData = async () => {
+    if (isOpen) {
+      try {
+        await Promise.all([
+          getInvoiceNumber(),
+          getConfig()
+        ]);
+      } catch (error) {
+        console.error('Error loading invoice data:', error);
+        // You might want to show an error message to the user here
+      }
+    }
+  };
+
+  void loadData(); // Use void operator to explicitly mark the promise as handled
+}, [isOpen, getInvoiceNumber, getConfig]);
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();

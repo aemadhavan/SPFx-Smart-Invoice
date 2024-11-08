@@ -11,4 +11,5 @@ export interface IConfig {
     BankName: string;
     BankAccountNo: string;
     PaymentTerms: string;
+    EmailToCustomer: boolean;
 }

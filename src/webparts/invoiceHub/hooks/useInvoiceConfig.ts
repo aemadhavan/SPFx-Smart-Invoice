@@ -56,6 +56,7 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
             BankName: configMap.BankName || "",
             BankAccountNo: configMap.AccountNo || "",
             PaymentTerms: configMap.PaymentTerms || "",
+            EmailToCustomer: (configMap.EmailToCustomer==="No")?false:true,
         };
         setConfig(configItem);
         setError(null);

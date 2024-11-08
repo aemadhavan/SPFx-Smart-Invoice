@@ -18,7 +18,7 @@ export const useInvoices = (sp: SPFI, listName: string) => {
       const items: IInvoice[] = await sp.web.lists
         .getByTitle(listName)
         .items
-        .select('Id,Title,InvoiceNumber,CustomerName,TotalAmount,InvoiceDate,FileRef,FileLeafRef')
+        .select('Id,Title,InvoiceNumber,CustomerName,TotalAmount,InvoiceDate,Status,FileRef,FileLeafRef')
         .orderBy('Created', false)();
 
       setInvoices(items);
@@ -31,14 +31,29 @@ export const useInvoices = (sp: SPFI, listName: string) => {
     }
   }, [sp, listName]);
 
-  // Initial fetch
+  // Initial fetch with proper promise handling
   useEffect(() => {
-    fetchInvoices();
+    const initFetch = async () => {
+      try {
+        await fetchInvoices();
+      } catch (err) {
+        console.error('Error during initial invoice fetch:', err);
+        setError('Failed to load invoices');
+      }
+    };
+
+    void initFetch(); // Use void operator to explicitly mark the promise as handled
   }, [fetchInvoices]);
+  
 
   // Expose the refresh function
   const refreshInvoices = useCallback(async () => {
-    await fetchInvoices();
+    try {
+      await fetchInvoices();
+    } catch (err) {
+      console.error('Error refreshing invoices:', err);
+      throw err; // Re-throw the error to be handled by the caller
+    }
   }, [fetchInvoices]);
 
   return { invoices, loading, error, refreshInvoices };
