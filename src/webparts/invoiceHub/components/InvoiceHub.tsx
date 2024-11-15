@@ -40,7 +40,11 @@ import { Document24Regular, AddRegular, Search24Regular, EditRegular, DeleteRegu
   MoreHorizontalRegular } from '@fluentui/react-icons';
 import { useInvoices } from '../hooks/useInvoices';
 import { CreateInvoiceDrawer, IInvoiceFormData } from './CreateInvoiceDrawer';
-
+import { spfi, SPFx } from "@pnp/sp";
+import { ICommentInfo } from "@pnp/sp/comments";
+import "@pnp/sp/comments/item";
+import "@pnp/sp/webs";
+import "@pnp/sp/items";
 
 // Define custom styles
 const useStyles = makeStyles({
@@ -221,6 +225,47 @@ const useStyles = makeStyles({
   select: {
     width: '100%',
     minWidth: '250px',
+  },
+  commentsSection: {
+    marginTop: '16px',
+    borderTop: `1px solid ${tokens.colorNeutralStroke1}`,
+    paddingTop: '16px',
+  },
+  commentsLabel: {
+    fontSize: '12px',
+    fontWeight: '600',
+    marginBottom: '8px',
+    color: tokens.colorNeutralForeground2,
+  },
+  commentItem: {
+    marginBottom: '12px',
+    padding: '12px',
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    borderRadius: '4px',
+  },
+  commentAuthor: {
+    fontSize: '12px',
+    fontWeight: '600',
+    marginBottom: '4px',
+    color: tokens.colorNeutralForeground1,
+  },
+  commentText: {
+    fontSize: '14px',
+    color: tokens.colorNeutralForeground1,
+    lineHeight: '20px',
+    whiteSpace: 'pre-wrap',
+  },
+  commentDate: {
+    fontSize: '12px',
+    color: tokens.colorNeutralForeground2,
+    marginTop: '4px',
+  },
+  noComments: {
+    fontSize: '14px',
+    color: tokens.colorNeutralForeground2,
+    fontStyle: 'italic',
+    padding: '8px 12px',
   }
 });
 
@@ -241,6 +286,14 @@ interface ITableColumn {
   label: string;
   width?: string;
 }
+// Add interface for comment type
+// interface ISharePointComment {
+//   AuthorName: string;
+//   CommentText: string;
+//   Modified: string;
+//   Created: string;
+//   ID: number;
+// }
 // Helper function to format currency
 const formatCurrency = (amount: number | null | undefined): string => {
   if (amount === null || amount === undefined) return '$0.00';
@@ -266,6 +319,10 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = React.useState(false);
   const [selectedStatus, setSelectedStatus] = React.useState('');
   const [isSaving, setIsSaving] = React.useState(false);
+
+  const [itemComments, setItemComments] = React.useState<ICommentInfo[]>([]);
+
+  const [loadingComments, setLoadingComments] = React.useState(false);
 
   const styles = useStyles();
   const searchId = useId('search');
@@ -300,16 +357,54 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
       setSelectedInvoiceId(invoiceId);
     }
   };
+
+  //Create a function to fetch comments
+  const fetchComments = async (itemId: number) => {
+    try {
+      setLoadingComments(true);
+      console.log('Fetching comments for item ID:', itemId);
+
+      // Initialize the SPFx context
+      const sp = spfi().using(SPFx(props.context));
+      //const item = await sp.web.lists.getByTitle(props.libraryName).items.getById(itemId)(); 
+      
+      //console.log('Fetched item:', item);
+      //const coment = await sp.web.lists.getByTitle(props.libraryName).items.getById(itemId).comments();
+      //console.log(coment)
+      // Get social feed for the item
+      const commentInfo = await sp.web.lists.getByTitle(props.libraryName).items.getById(itemId).comments();
+      console.log('Comment info:', commentInfo,commentInfo.length);
+  
+      if (commentInfo) {
+        setItemComments(commentInfo);
+      } else {
+        setItemComments([]);
+      }
+  
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      setItemComments([]);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
   // Add handlers for context menu actions
   // Update the handleEdit function
 // 1. First, update the handleEdit function to ensure it sets the initial state correctly
-const handleEdit = (invoiceId: number): void => {
+const handleEdit = async (invoiceId: number): Promise<void> => {
   const invoice = filteredInvoices.find(inv => inv.Id === invoiceId);
   console.log('Invoice found:', invoice); // Debug log
   if (invoice) {
     setSelectedInvoiceId(invoiceId);
     setSelectedStatus(invoice.Status);
     setIsUpdateDialogOpen(true);
+    // Fetch comments when dialog opens
+    try {
+      await fetchComments(invoiceId);
+    } catch (error) {
+      console.error('Error fetching comments in handleEdit:', error);
+    } 
   }
 };
 // Update handleStatusChange
@@ -358,6 +453,7 @@ const handleCloseUpdateDialog = (): void => {
   setTimeout(() => {
     setSelectedInvoiceId(null);
     setSelectedStatus('');
+    setItemComments([]); // Clear comments
   }, 100);
 };
 
@@ -428,8 +524,8 @@ const handleCloseDialog = (): void => {
 
   const columns = [
     { columnKey: "radio", label: "", width: '20px' },
-  { columnKey: "more", label: "", width: '20px' },
-  { columnKey: "file", label: "", width: '20px' },
+    { columnKey: "more", label: "", width: '20px' },
+    { columnKey: "file", label: "", width: '20px' },
     { columnKey: "name", label: "Name" },
     { columnKey: "invoiceNumber", label: "Invoice Number" },
     { columnKey: "customer", label: "Customer" },
@@ -464,7 +560,7 @@ const handleCloseDialog = (): void => {
       key: 'edit',
       label: 'Update',
       icon: <EditRegular />,
-      onClick: (invoiceId: number) => handleEdit(invoiceId)
+      onClick: (invoiceId: number) => void handleEdit(invoiceId)
     },
     // {
     //   key: 'comment',
@@ -645,68 +741,97 @@ return (
     />
 
 {/* Add to your JSX return statement, right before the closing FluentProvider tag: */}
-<Dialog open={isDeleteDialogOpen} onOpenChange={(event, data) => {
-  if (!data.open) handleCloseDialog();
-}}>
-  <DialogSurface>
-    <DialogBody>
-      <DialogTitle>Confirm Delete</DialogTitle>
-      <DialogContent>
-        Are you sure you want to delete this invoice? This action cannot be undone.
-      </DialogContent>
-      <DialogActions>
-        <Button appearance="secondary" onClick={handleCloseDialog}>Cancel</Button>
-        <Button appearance="primary" onClick={handleConfirmDelete}>Delete</Button>
-      </DialogActions>
-    </DialogBody>
-  </DialogSurface>
-</Dialog>
+    <Dialog open={isDeleteDialogOpen} onOpenChange={(event, data) => {
+      if (!data.open) handleCloseDialog();
+    }}>
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>Confirm Delete</DialogTitle>
+          <DialogContent>
+            Are you sure you want to delete this invoice? This action cannot be undone.
+          </DialogContent>
+          <DialogActions>
+            <Button appearance="secondary" onClick={handleCloseDialog}>Cancel</Button>
+            <Button appearance="primary" onClick={handleConfirmDelete}>Delete</Button>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
 
 {/* // Add the Update Status Dialog component before the closing FluentProvider tag // 2. Update the Select component in the Dialog*/}
 
 {/* Update the Dialog with the fixed Select implementation */}
-<Dialog 
-  open={isUpdateDialogOpen} 
-  onOpenChange={(event, data) => {
-    if (!data.open) handleCloseUpdateDialog();
-  }}
->
-  <DialogSurface>
-    <DialogBody>
-      <DialogTitle>Update Status</DialogTitle>
-      <DialogContent>
-        <div className={styles.dialogContent}>
-        <Select
-            value={selectedStatus}
-            onChange={handleStatusChange as SelectProps["onChange"]}
-            className={styles.select}
-          >
-            {STATUS_OPTIONS.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </DialogContent>
-      <DialogActions>
-        <Button 
-          appearance="secondary" 
-          onClick={handleCloseUpdateDialog}
-        >
-          Cancel
-        </Button>
-        <Button
-          appearance="primary"
-          onClick={handleStatusSave}
-          disabled={!selectedStatus || selectedStatus === (filteredInvoices.find(inv => inv.Id === selectedInvoiceId)?.Status) || isSaving}
-        >
-          {isSaving ? 'Saving...' : 'Save'}
-        </Button>
-      </DialogActions>
-    </DialogBody>
-  </DialogSurface>
-</Dialog>
+    <Dialog 
+      open={isUpdateDialogOpen} 
+      onOpenChange={(event, data) => {
+        if (!data.open) handleCloseUpdateDialog();
+      }}
+    >
+      <DialogSurface>
+        <DialogBody>
+          <DialogTitle>Update Status</DialogTitle>
+          <DialogContent>
+            <div className={styles.dialogContent}>
+            <Select
+                value={selectedStatus}
+                onChange={handleStatusChange as SelectProps["onChange"]}
+                className={styles.select}
+              >
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </Select>
+              <div className={styles.commentsSection}>
+                <div className={styles.commentsLabel}>Comments History</div>
+                {loadingComments ? (
+                  <div className={styles.noComments}>Loading comments...</div>
+                ) : (
+                  <>
+                    {itemComments.length > 0 ? (
+                      itemComments
+                        .sort((a, b) => 
+                          new Date(b.createdDate || '').getTime() - new Date(a.createdDate || '').getTime()
+                        )
+                        .map((comment, index) => (
+                          <div key={comment.id || index} className={styles.commentItem}>
+                            <div className={styles.commentAuthor}>
+                              {comment.author?.name || 'Unknown'}
+                            </div>
+                            <div className={styles.commentText}>{comment.text}</div>
+                            <div className={styles.commentDate}>
+                              {formatDate(comment.createdDate || '')}
+                            </div>
+                          </div>
+                        ))
+                    ) : (
+                      <div className={styles.noComments}>No comments available</div>
+                    )}
+                  </>
+                )}
+              </div>
+
+            </div>
+          </DialogContent>
+          <DialogActions>
+            <Button 
+              appearance="secondary" 
+              onClick={handleCloseUpdateDialog}
+            >
+              Cancel
+            </Button>
+            <Button
+              appearance="primary"
+              onClick={handleStatusSave}
+              disabled={!selectedStatus || selectedStatus === (filteredInvoices.find(inv => inv.Id === selectedInvoiceId)?.Status) || isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogActions>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
 
   </FluentProvider>
 );
