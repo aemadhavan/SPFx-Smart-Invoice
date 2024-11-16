@@ -11,7 +11,7 @@ import { IInvoiceFormData } from "./CreateInvoiceDrawer";
 // Extend jsPDF type to include autoTable
 declare module 'jspdf' {
   interface jsPDF {
-    autoTable: (options: any) => void;
+    autoTable: (options: AutoTableSettings) => void;
     lastAutoTable: {
       finalY: number;
     };
@@ -24,6 +24,44 @@ interface IInvoiceMetadata {
   CustomerName: string;
   TotalAmount: number;
   InvoiceDate: string;
+}
+interface AutoTableStyles {
+  fillColor?: number[];
+  textColor?: number[];
+  fontStyle?: 'normal' | 'bold' | 'italic';
+  fontSize?: number;
+  halign?: 'left' | 'center' | 'right';
+  valign?: 'top' | 'middle' | 'bottom';
+  cellWidth?: number | 'auto';
+  minCellWidth?: number;
+  cellPadding?: number;
+  lineColor?: number[];
+  lineWidth?: number;
+}
+
+interface AutoTableColumnStyles {
+  [key: number]: Partial<AutoTableStyles>;
+}
+
+interface AutoTableColumn {
+  content: string;
+  styles?: Partial<AutoTableStyles>;
+}
+
+interface AutoTableSettings {
+  startY?: number;
+  margin?: { 
+    right?: number;
+    left?: number;
+    top?: number;
+    bottom?: number;
+  };
+  head?: AutoTableColumn[][];
+  body?: (string | AutoTableColumn)[][];
+  theme?: 'striped' | 'grid' | 'plain';
+  headStyles?: Partial<AutoTableStyles>;
+  bodyStyles?: Partial<AutoTableStyles>;
+  columnStyles?: AutoTableColumnStyles;
 }
 // Utility function to format date from YYYY-MM-DD to DD-MM-YYYY
 const formatDate = (dateStr: string): string => {
@@ -132,8 +170,8 @@ formData: IInvoiceFormData, sp: SPFI, invoiceLibraryName: string): Promise<void>
         0: { cellWidth: 'auto' },
         1: { cellWidth: 40, halign: 'right' }
       },
-      margin: { right: 40 }, // Add right margin for totals alignment
-    });
+      margin: { right: 40 },
+    } as AutoTableSettings);
 
     // Calculate final position for totals
     const finalY = doc.lastAutoTable.finalY + 10;

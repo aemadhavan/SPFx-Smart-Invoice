@@ -7,10 +7,15 @@ import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import { IInvoice } from '../components/InvoiceHub';
 
-export const useInvoices = (sp: SPFI, listName: string) => {
+export const useInvoices = (sp: SPFI, listName: string):{
+  invoices: IInvoice[];
+  loading: boolean;
+  error: string | undefined;
+  refreshInvoices: () => Promise<void>;
+} => {
   const [invoices, setInvoices] = useState<IInvoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>(undefined);
 
   const fetchInvoices = useCallback(async () => {
     try {
@@ -22,7 +27,7 @@ export const useInvoices = (sp: SPFI, listName: string) => {
         .orderBy('Created', false)();
 
       setInvoices(items);
-      setError(null);
+      setError(undefined);
     } catch (err) {
       console.error('Error fetching invoices:', err);
       setError(err instanceof Error ? err.message : 'Error fetching invoices');
@@ -33,21 +38,37 @@ export const useInvoices = (sp: SPFI, listName: string) => {
 
   // Initial fetch with proper promise handling
   useEffect(() => {
-    const initFetch = async () => {
+    let isMounted = true; // Flag to check if component is still mounted
+    const initFetch = async (): Promise<void> => {
       try {
-        await fetchInvoices();
+        if (isMounted) {
+          await fetchInvoices();
+        }
       } catch (err) {
         console.error('Error during initial invoice fetch:', err);
-        setError('Failed to load invoices');
+        if (isMounted) {
+          setError('Failed to load invoices');
+        }
       }
     };
 
-    void initFetch(); // Use void operator to explicitly mark the promise as handled
+    // Call initFetch and handle any potential errors
+    initFetch().catch((err) => {
+      console.error('Unhandled error in initFetch:', err);
+      if (isMounted) {
+        setError('Unexpected error while loading invoices');
+      }
+    });
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+    };
   }, [fetchInvoices]);
   
 
   // Expose the refresh function
-  const refreshInvoices = useCallback(async () => {
+  const refreshInvoices = useCallback(async (): Promise<void> => {
     try {
       await fetchInvoices();
     } catch (err) {

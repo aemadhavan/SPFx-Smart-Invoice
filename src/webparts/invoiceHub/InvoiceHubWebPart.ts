@@ -19,7 +19,7 @@ export interface IInvoiceHubWebPartProps {
 }
 
 export default class InvoiceHubWebPart extends BaseClientSideWebPart<IInvoiceHubWebPartProps> {
-  private _sp: SPFI;
+  private _sp: SPFI=spfi();
   
   public render(): void {
     const element: React.ReactElement<IInvoiceHubProps> = React.createElement(

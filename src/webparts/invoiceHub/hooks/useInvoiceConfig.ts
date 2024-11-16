@@ -14,7 +14,7 @@ interface IConfigItem {
 interface IUseInvoiceConfigReturn {
   invoiceNumber: string;
   isLoading: boolean;
-  error: Error | null;
+  error: Error | undefined;
   config: IConfig | undefined;  
   getConfig: () => Promise<void>;
   getInvoiceNumber: () => Promise<void>;
@@ -26,7 +26,7 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
   const [config, setConfig] = useState<IConfig>();
   const [configId, setConfigId] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<Error | undefined>(undefined);
 
   // Format invoice number
   const formatInvoiceNumber = (number: string): string => {
@@ -59,9 +59,9 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
             EmailToCustomer: (configMap.EmailToCustomer==="No")?false:true,
         };
         setConfig(configItem);
-        setError(null);
+        setError(undefined);
     }
-    catch (err) {
+    catch (error) {
       console.error('Error fetching config:', error)
       throw error
     }
@@ -73,7 +73,7 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
   // Get invoice number from config
   const getInvoiceNumber = useCallback(async () => {
     setIsLoading(true);
-    setError(null);
+    setError(undefined);
     try {
       const configItems: IConfigItem[] = await sp.web.lists
         .getByTitle("Config")
@@ -95,7 +95,7 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
   // Increment invoice number
   const incrementInvoiceNumber = useCallback(async () => {
     setIsLoading(true);
-    setError(null);
+    setError(undefined);
     try {
       if (!configId) {
         throw new Error('Config ID not found');

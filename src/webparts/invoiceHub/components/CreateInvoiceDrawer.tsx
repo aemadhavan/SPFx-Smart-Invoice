@@ -286,8 +286,8 @@ React.useEffect(() => {
 
 // Load invoice number and config when drawer opens
 React.useEffect(() => {
-  const loadData = async () => {
-    if (isOpen) {
+  if (isOpen) {
+    const loadData = async (): Promise<void> => {
       try {
         await Promise.all([
           getInvoiceNumber(),
@@ -297,13 +297,16 @@ React.useEffect(() => {
         console.error('Error loading invoice data:', error);
         // You might want to show an error message to the user here
       }
-    }
-  };
+    };
 
-  void loadData(); // Use void operator to explicitly mark the promise as handled
+    // Call loadData without void operator
+    loadData().catch(error => {
+      console.error('Error in loadData:', error);
+    });
+  }
 }, [isOpen, getInvoiceNumber, getConfig]);
 
-const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent): Promise<void> => {
   e.preventDefault();
   try {
       // First, manage customer data
@@ -346,7 +349,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 };
   // Updated date change handler
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>):void => {
     const { name, value } = e.target;
     
     if (name === 'invoiceDate') {
@@ -360,13 +363,13 @@ const handleSubmit = async (e: React.FormEvent) => {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>):void => {
      const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
    };
     
    // Add function to handle item changes
-  const handleItemChange = (id: string, field: 'description' | 'amount', value: string | number) => {
+  const handleItemChange = (id: string, field: 'description' | 'amount', value: string | number):void => {
     setFormData(prev => ({
       ...prev,
       items: prev.items.map(item => 
@@ -378,7 +381,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   };
 
  // Add function to add new item
-  const handleAddItem = () => {
+  const handleAddItem = ():void => {
     setFormData(prev => ({
       ...prev,
       items: [
@@ -392,7 +395,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     }));
   };
      // Add function to remove item
-  const handleRemoveItem = (id: string) => {
+  const handleRemoveItem = (id: string):void => {
     if (formData.items.length === 1) return; // Prevent removing last item
     setFormData(prev => ({
       ...prev,
