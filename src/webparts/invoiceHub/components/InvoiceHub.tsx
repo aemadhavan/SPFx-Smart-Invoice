@@ -33,7 +33,8 @@ import {
   DialogContent,
   Select,
   //Option,
-  SelectProps 
+  SelectProps,
+  Textarea 
 } from '@fluentui/react-components';
 import { Document24Regular, AddRegular, Search24Regular, EditRegular, DeleteRegular, 
   //CommentRegular, 
@@ -231,6 +232,30 @@ const useStyles = makeStyles({
     borderTop: `1px solid ${tokens.colorNeutralStroke1}`,
     paddingTop: '16px',
   },
+  commentsContainer: {
+    maxHeight: '300px', // Fixed height for comments container
+    overflowY: 'auto',  // Enable vertical scrolling
+    marginTop: '8px',
+    // Add custom scrollbar styling
+    '&::-webkit-scrollbar': {
+      width: '6px',
+    },
+    '&::-webkit-scrollbar-track': {
+      background: tokens.colorNeutralBackground1,
+      borderRadius: '3px',
+    },
+    '&::-webkit-scrollbar-thumb': {
+      background: tokens.colorNeutralStroke1,
+      borderRadius: '3px',
+      '&:hover': {
+        background: tokens.colorNeutralStroke1Hover,
+      },
+    },
+  },
+  commentsContainerExpanded: {
+    // When there are more than 3 comments
+    maxHeight: '200px', // Reduced height to show clear scrolling
+  },
   commentsLabel: {
     fontSize: '12px',
     fontWeight: '600',
@@ -243,6 +268,9 @@ const useStyles = makeStyles({
     backgroundColor: tokens.colorNeutralBackground1,
     border: `1px solid ${tokens.colorNeutralStroke1}`,
     borderRadius: '4px',
+    '&:last-child': {
+      marginBottom: '0', // Remove margin from last item
+    },
   },
   commentAuthor: {
     fontSize: '12px',
@@ -266,7 +294,26 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground2,
     fontStyle: 'italic',
     padding: '8px 12px',
-  }
+  },
+  commentInput: {
+    marginTop: '16px',
+  },
+  commentTextarea: {
+    width: '100%',
+    minHeight: '80px',
+  },
+  commentInputContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  commentButtonContainer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+  },
+  commentButton: {
+    minWidth: '80px',
+  },
 });
 
 
@@ -285,6 +332,11 @@ interface ITableColumn {
   columnKey: string;
   label: string;
   width?: string;
+}
+interface ICommentInput {
+  showInput: boolean;
+  comment: string;
+  isSubmitting: boolean;
 }
 // Add interface for comment type
 // interface ISharePointComment {
@@ -323,6 +375,12 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
   const [itemComments, setItemComments] = React.useState<ICommentInfo[]>([]);
 
   const [loadingComments, setLoadingComments] = React.useState(false);
+  // Add this new state in the InvoiceHub component
+  const [commentInput, setCommentInput] = React.useState<ICommentInput>({
+    showInput: false,
+    comment: '',
+    isSubmitting: false
+  });
 
   const styles = useStyles();
   const searchId = useId('search');
@@ -388,7 +446,37 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
       setLoadingComments(false);
     }
   };
+// Add this new function to handle comment submission
+  const handleCommentSubmit = async (): Promise<void> => {
+    if (!selectedInvoiceId || !commentInput.comment.trim()) return;
 
+    try {
+      setCommentInput(prev => ({ ...prev, isSubmitting: true }));
+      
+      // Initialize the SPFx context
+      const sp = spfi().using(SPFx(props.context));
+      
+      // Add the comment to the item
+      await sp.web.lists
+        .getByTitle(props.libraryName)
+        .items.getById(selectedInvoiceId)
+        .comments.add(commentInput.comment.trim());
+
+      // Refresh comments
+      await fetchComments(selectedInvoiceId);
+      
+      // Clear the comment input
+      setCommentInput(prev => ({
+        ...prev,
+        comment: '',
+        isSubmitting: false
+      }));
+
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+      setCommentInput(prev => ({ ...prev, isSubmitting: false }));
+    }
+  };
   // Add handlers for context menu actions
   // Update the handleEdit function
 // 1. First, update the handleEdit function to ensure it sets the initial state correctly
@@ -398,6 +486,13 @@ const handleEdit = async (invoiceId: number): Promise<void> => {
   if (invoice) {
     setSelectedInvoiceId(invoiceId);
     setSelectedStatus(invoice.Status);
+    // Set comment input visibility based on the current status
+    setCommentInput(prev => ({
+      ...prev,
+      showInput: invoice.Status === 'Follow-up Required',
+      comment: '',
+      isSubmitting: false
+    }));
     setIsUpdateDialogOpen(true);
     // Fetch comments when dialog opens
     try {
@@ -411,6 +506,13 @@ const handleEdit = async (invoiceId: number): Promise<void> => {
 const handleStatusChange = (_event: any, data: { value: string }): void => {
   console.log('Status changed to:', data.value); // Debug log
   setSelectedStatus(data.value);
+  // Show comment input if status is "Follow-up Required"
+  setCommentInput(prev => ({
+    ...prev,
+    showInput: data.value === 'Follow-up Required',
+    // Maintain existing comment if the status changes back to Follow-up Required
+    comment: data.value === 'Follow-up Required' ? prev.comment : ''
+  }));
 };
 const handleStatusSave = async (): Promise<void> => {
   try {
@@ -442,6 +544,12 @@ React.useEffect(() => {
     if (invoice) {
       console.log('Setting initial status:', invoice.Status); // Debug log
       setSelectedStatus(invoice.Status);
+
+      // Set comment input visibility based on the current status
+      setCommentInput(prev => ({
+        ...prev,
+        showInput: invoice.Status === 'Follow-up Required',
+      }));
     }
   }
 }, [isUpdateDialogOpen, selectedInvoiceId, filteredInvoices]);
@@ -449,6 +557,12 @@ React.useEffect(() => {
 // 5. Update the handleCloseUpdateDialog
 const handleCloseUpdateDialog = (): void => {
   setIsUpdateDialogOpen(false);
+  // Reset comment input state
+  setCommentInput({
+    showInput: false,
+    comment: '',
+    isSubmitting: false
+  });
   // Delay the reset of other states
   setTimeout(() => {
     setSelectedInvoiceId(null);
@@ -783,6 +897,30 @@ return (
                   </option>
                 ))}
               </Select>
+              {commentInput.showInput && (
+                  <div className={styles.commentInputContainer}>
+                    <Textarea
+                      placeholder="Add a comment..."
+                      value={commentInput.comment}
+                      onChange={(e) => setCommentInput(prev => ({
+                        ...prev,
+                        comment: e.target.value
+                      }))}
+                      resize="vertical"
+                      className={styles.commentTextarea}
+                    />
+                    <div className={styles.commentButtonContainer}>
+                        <Button
+                          appearance="primary"
+                          onClick={handleCommentSubmit}
+                          disabled={!commentInput.comment.trim() || commentInput.isSubmitting}
+                          className={styles.commentButton}
+                        >
+                          {commentInput.isSubmitting ? 'Saving...' : 'Comment'}
+                        </Button>
+                    </div>
+                  </div>
+                )}
               <div className={styles.commentsSection}>
                 <div className={styles.commentsLabel}>Comments History</div>
                 {loadingComments ? (
@@ -790,24 +928,26 @@ return (
                 ) : (
                   <>
                     {itemComments.length > 0 ? (
-                      itemComments
-                        .sort((a, b) => 
-                          new Date(b.createdDate || '').getTime() - new Date(a.createdDate || '').getTime()
-                        )
-                        .map((comment, index) => (
-                          <div key={comment.id || index} className={styles.commentItem}>
-                            <div className={styles.commentAuthor}>
-                              {comment.author?.name || 'Unknown'}
-                            </div>
-                            <div className={styles.commentText}>{comment.text}</div>
-                            <div className={styles.commentDate}>
-                              {formatDate(comment.createdDate || '')}
-                            </div>
-                          </div>
-                        ))
-                    ) : (
-                      <div className={styles.noComments}>No comments available</div>
-                    )}
+                        <div className={`${styles.commentsContainer} ${itemComments.length > 3 ? styles.commentsContainerExpanded : ''}`}>
+                          {itemComments
+                            .sort((a, b) => 
+                              new Date(b.createdDate || '').getTime() - new Date(a.createdDate || '').getTime()
+                            )
+                            .map((comment, index) => (
+                              <div key={comment.id || index} className={styles.commentItem}>
+                                <div className={styles.commentAuthor}>
+                                  {comment.author?.name || 'Unknown'}
+                                </div>
+                                <div className={styles.commentText}>{comment.text}</div>
+                                <div className={styles.commentDate}>
+                                  {formatDate(comment.createdDate || '')}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                        ) : (
+                        <div className={styles.noComments}>No comments available</div>
+                      )}
                   </>
                 )}
               </div>
@@ -822,11 +962,15 @@ return (
               Cancel
             </Button>
             <Button
-              appearance="primary"
-              onClick={handleStatusSave}
-              disabled={!selectedStatus || selectedStatus === (filteredInvoices.find(inv => inv.Id === selectedInvoiceId)?.Status) || isSaving}
-            >
-              {isSaving ? 'Saving...' : 'Save'}
+                appearance="primary"
+                onClick={handleStatusSave}
+                disabled={
+                  !selectedStatus || 
+                  (selectedStatus === (filteredInvoices.find(inv => inv.Id === selectedInvoiceId)?.Status)) ||
+                  isSaving
+                }
+              >
+                {isSaving ? 'Saving...' : 'Save'}
             </Button>
           </DialogActions>
         </DialogBody>
