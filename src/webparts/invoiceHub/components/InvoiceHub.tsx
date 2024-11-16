@@ -24,18 +24,18 @@ import {
   // MenuItem,
   // MenuPopover,
  // MenuProps
-  Dialog,
-  DialogOpenChangeEvent,
+  //Dialog,
+  //DialogOpenChangeEvent,
  // DialogTrigger,
-  DialogSurface,
-  DialogTitle,
-  DialogBody,
-  DialogActions,
-  DialogContent,
-  Select,
+  //DialogSurface,
+  //DialogTitle,
+  //DialogBody,
+  //DialogActions,
+  //DialogContent,
+  //Select,
   //Option,
-  SelectProps,
-  Textarea 
+  //SelectProps,
+  //Textarea 
 } from '@fluentui/react-components';
 import { 
   //Document24Regular, 
@@ -46,6 +46,7 @@ import {
 } from '@fluentui/react-icons';
 import { useInvoices } from '../hooks/useInvoices';
 import { InvoiceTableRow } from './InvoiceTableRow';
+import { UpdateInvoiceDialog } from './UpdateInvoiceDialog';
 import { DeleteInvoiceDialog } from './DeleteInvoiceDialog';
 import { CreateInvoiceDrawer, IInvoiceFormData } from './CreateInvoiceDrawer';
 import { spfi, SPFx } from "@pnp/sp";
@@ -408,7 +409,7 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
   const {invoices, loading, error,refreshInvoices  } = useInvoices(props.sp, props.libraryName);
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
-  const [selectedInvoiceId, setSelectedInvoiceId] = React.useState<number | undefined>(undefined);
+  const [selectedInvoice, setSelectedInvoice] = React.useState<IInvoice | undefined>(undefined);
 
   //const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = React.useState<IInvoice  | undefined>(undefined);
@@ -487,7 +488,7 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
   };
 // Add this new function to handle comment submission
   const handleCommentSubmit = async (): Promise<void> => {
-    if (!selectedInvoiceId || !commentInput.comment.trim()) return;
+    if (!selectedInvoice || !commentInput.comment.trim()) return;
 
     try {
       setCommentInput(prev => ({ ...prev, isSubmitting: true }));
@@ -498,11 +499,11 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
       // Add the comment to the item
       await sp.web.lists
         .getByTitle(props.libraryName)
-        .items.getById(selectedInvoiceId)
+        .items.getById(selectedInvoice.Id)
         .comments.add(commentInput.comment.trim());
 
       // Refresh comments
-      await fetchComments(selectedInvoiceId);
+      await fetchComments(selectedInvoice.Id);
       
       // Clear the comment input
       setCommentInput(prev => ({
@@ -522,8 +523,8 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
 const handleEdit = async (invoiceId: number): Promise<void> => {
   const invoice = filteredInvoices.find(inv => inv.Id === invoiceId);
   console.log('Invoice found:', invoice); // Debug log
-  if (invoice) {
-    setSelectedInvoiceId(invoiceId);
+  if (invoice) {    
+    setSelectedInvoice(invoice);
     setSelectedStatus(invoice.Status);
     // Set comment input visibility based on the current status
     setCommentInput(prev => ({
@@ -556,18 +557,17 @@ const handleStatusChange = (_event: unknown, data: { value: string }): void => {
 const handleStatusSave = async (): Promise<void> => {
   try {
     setIsSaving(true);
-    if (selectedInvoiceId) {
+    if (selectedInvoice) {
       await props.sp.web.lists
         .getByTitle(props.libraryName)
-        .items.getById(selectedInvoiceId)
+        .items.getById(selectedInvoice.Id)
         .update({
           Status: selectedStatus
         });
       
       // Refresh the list
       await refreshInvoices();
-      setIsUpdateDialogOpen(false);
-      setSelectedInvoiceId(undefined);
+      handleCloseUpdateDialog();
     }
   } catch (error) {
     console.error('Error updating status:', error);
@@ -575,12 +575,17 @@ const handleStatusSave = async (): Promise<void> => {
     setIsSaving(false);
   }
 };
-
+// const handleCommentChange = (comment: string): void => {
+//   setCommentInput(prev => ({
+//     ...prev,
+//     comment
+//   }));
+// };
 
 // Update useEffect to handle initial status
 React.useEffect(() => {
-  if (isUpdateDialogOpen && selectedInvoiceId) {
-    const invoice = filteredInvoices.find(inv => inv.Id === selectedInvoiceId);
+  if (isUpdateDialogOpen && selectedInvoice) {
+    const invoice = filteredInvoices.find(inv => inv.Id === selectedInvoice.Id);
     if (invoice) {
       console.log('Setting initial status:', invoice.Status); // Debug log
       setSelectedStatus(invoice.Status);
@@ -592,7 +597,7 @@ React.useEffect(() => {
       }));
     }
   }
-}, [isUpdateDialogOpen, selectedInvoiceId, filteredInvoices]);
+}, [isUpdateDialogOpen, selectedInvoice]);
 
 // 5. Update the handleCloseUpdateDialog
 const handleCloseUpdateDialog = (): void => {
@@ -605,16 +610,12 @@ const handleCloseUpdateDialog = (): void => {
   });
   // Delay the reset of other states
   setTimeout(() => {
-    setSelectedInvoiceId(undefined);
+    setSelectedInvoice(undefined);
     setSelectedStatus('');
     setItemComments([]); // Clear comments
   }, 100);
 };
 
-
-  // const handleComment = (invoiceId: number): void => {
-  //   console.log('Comment on invoice:', invoiceId);
-  // };
 
   // Update the delete handler
   const handleDelete = (invoiceId: number): void => {
@@ -636,8 +637,8 @@ const handleConfirmDelete = async (): Promise<void> => {
       await refreshInvoices();
       
       // Clear selection if deleted item was selected
-      if (selectedInvoiceId === invoiceToDelete.Id) {
-        setSelectedInvoiceId(undefined);
+      if (selectedInvoice?.Id === invoiceToDelete.Id) {
+        setSelectedInvoice(undefined);
       }
     }
   } catch (error) {
@@ -657,7 +658,7 @@ const handleCloseDialog = (): void => {
 
   const handleEditStatus = (): void => {
     // Implement status edit functionality
-    console.log('Edit status for invoice:', selectedInvoiceId);
+    console.log('Edit status for invoice:', selectedInvoice?.Id);
   };
   const handleInvoiceSubmit = async (data: IInvoiceFormData): Promise<void> => {
     try {
@@ -680,11 +681,11 @@ const handleCloseDialog = (): void => {
   //   }
   // };
   
-  const handleUpdateDialogOpenChange = (_: DialogOpenChangeEvent, data: { open: boolean }): void => {
-    if (!data.open) {
-      handleCloseUpdateDialog();
-    }
-  };
+  // const handleUpdateDialogOpenChange = (_: DialogOpenChangeEvent, data: { open: boolean }): void => {
+  //   if (!data.open) {
+  //     handleCloseUpdateDialog();
+  //   }
+  // };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -843,7 +844,7 @@ return (
             contentBefore={<Search24Regular />}
             type="search"
           />
-          {selectedInvoiceId ? (              
+          { selectedInvoice? (              
             <Button 
               appearance="primary"
               className={styles.createButton}
@@ -890,7 +891,7 @@ return (
             <InvoiceTableRow
               key={invoice.Id}
               invoice={invoice}
-              isSelected={selectedInvoiceId === invoice.Id}
+              isSelected={selectedInvoice?.Id === invoice.Id}
               onEdit={handleEdit}
               onDelete={handleDelete}
               formatCurrency={formatCurrency}
@@ -931,58 +932,30 @@ return (
       formatDate={formatDate}
     />
 
-{/* Add to your JSX return statement, right before the closing FluentProvider tag: */}
-    {/* <Dialog open={isDeleteDialogOpen} onOpenChange={handleDialogOpenChange}>
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>Confirm Delete</DialogTitle>
-          <DialogContent>
-            <div className={styles.dialogContent}>
-            <p>Are you sure you want to delete this invoice? This action cannot be undone.</p>
-            {invoiceToDelete && (
-              <div className={styles.invoiceInfoSection}>
-                <div className={styles.infoGrid}>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Invoice Number</span>
-                    <span className={styles.infoValue}>
-                      {filteredInvoices.find(inv => inv.Id === invoiceToDelete)?.InvoiceNumber || '-'}
-                    </span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Customer Name</span>
-                    <span className={styles.infoValue}>
-                      {filteredInvoices.find(inv => inv.Id === invoiceToDelete)?.CustomerName || '-'}
-                    </span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Invoice Date</span>
-                    <span className={styles.infoValue}>
-                      {formatDate(filteredInvoices.find(inv => inv.Id === invoiceToDelete)?.InvoiceDate || '')}
-                    </span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Total Amount</span>
-                    <span className={styles.infoValue}>
-                      {formatCurrency(filteredInvoices.find(inv => inv.Id === invoiceToDelete)?.TotalAmount)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-            </div>
-          </DialogContent>
-          <DialogActions>
-            <Button appearance="secondary" onClick={handleCloseDialog}>Cancel</Button>
-            <Button appearance="primary" onClick={handleConfirmDelete}>Delete</Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog> */}
-
+    <UpdateInvoiceDialog 
+        isOpen={isUpdateDialogOpen}
+        selectedInvoice={selectedInvoice}
+        selectedStatus={selectedStatus}
+        itemComments={itemComments}
+        commentInput={commentInput}
+        loadingComments={loadingComments}
+        isSaving={isSaving}
+        statusOptions={STATUS_OPTIONS}
+        onClose={handleCloseUpdateDialog}
+        onStatusChange={handleStatusChange}
+        onCommentChange={(comment: string) => setCommentInput(prev => ({
+          ...prev,
+          comment
+        }))}
+        onCommentSubmit={handleCommentSubmit}
+        onStatusSave={handleStatusSave}
+        formatCurrency={formatCurrency}
+        formatDate={formatDate}
+      />
 {/* // Add the Update Status Dialog component before the closing FluentProvider tag // 2. Update the Select component in the Dialog*/}
 
 {/* Update the Dialog with the fixed Select implementation */}
-    <Dialog 
+    {/* <Dialog 
       open={isUpdateDialogOpen} 
       onOpenChange={handleUpdateDialogOpenChange}
     >
@@ -1110,7 +1083,7 @@ return (
           </DialogActions>
         </DialogBody>
       </DialogSurface>
-    </Dialog>
+    </Dialog> */}
 
   </FluentProvider>
 );
