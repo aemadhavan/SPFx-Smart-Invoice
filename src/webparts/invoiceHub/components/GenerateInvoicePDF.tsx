@@ -87,6 +87,13 @@ const uploadPDFToSharePoint = async (
     const item = await sp.web.getFileByServerRelativePath(fileServerRelativeUrl).listItemAllFields();
 
     await sp.web.lists.getByTitle(invoiceLibraryName).items.getById(item.Id).update(metadata);
+    const comment = `Customer (${metadata.CustomerName}) - Invoice #${metadata.InvoiceNumber} generated and Total amount is ${metadata.TotalAmount}.`
+    
+    await sp.web.lists
+        .getByTitle(invoiceLibraryName)
+        .items.getById(item.Id)
+        .comments.add(comment);
+    
     console.log(`File ${fileName} uploaded successfully with metadata`);
 
   } catch (error) {

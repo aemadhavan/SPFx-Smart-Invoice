@@ -10,9 +10,9 @@ import {
   MenuItem,
   makeStyles,
   tokens,
-  
-  //FluentProvider,
-  //webLightTheme
+  FluentProvider,
+  webLightTheme,
+  mergeClasses,
 } from '@fluentui/react-components';
 import {
   Document24Regular,
@@ -74,6 +74,45 @@ const useStyles = makeStyles({
     position: 'relative',
     width: '100%',
   },
+  menuButton: {
+    minWidth: '28px',
+    padding: '4px',
+    margin: '0',
+    height: '28px',
+    '&:hover': {
+      backgroundColor: tokens.colorNeutralBackground3,
+    }
+  },
+  menuList: {
+    minWidth: '160px',
+    padding: '4px 0',
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    borderRadius: tokens.borderRadiusMedium,
+    boxShadow: tokens.shadow4,
+  },
+  menuItem: {
+    padding: '6px 12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    cursor: 'pointer',
+    color: tokens.colorNeutralForeground1,
+    '&:hover': {
+      backgroundColor: tokens.colorNeutralBackground2,
+      color: tokens.colorNeutralForeground1Hover,
+    }
+  },
+  menuItemContent: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    width: '100%',
+  },
+  menuIcon: {
+    fontSize: '16px',
+    color: 'inherit',
+  },
   iconCell: {
     width: '20px',
     padding: '0 4px',
@@ -93,12 +132,13 @@ const useStyles = makeStyles({
     textAlign: 'right',
   },
   link: {
-    color: '#0066cc',
+    color: tokens.colorBrandForeground1,
     textDecoration: 'none',
     padding: '8px 0',
     display: 'block',
     '&:hover': {
-      textDecoration: 'underline'
+      textDecoration: 'underline',
+      color: tokens.colorBrandForegroundLinkHover,
     },    
   },
 });
@@ -124,90 +164,82 @@ export const InvoiceTableRow: React.FC<InvoiceTableRowProps> = ({
 
   return (
     <TableRow 
-    key={invoice.Id} 
-    className={`${styles.tableRow} ${styles.hoverRow} ${isSelected ? styles.selectedRow : ''}`}
-  >
-    <TableCell className={styles.moreCell}>
-      <div className={styles.moreContainer}>
-        <Menu>
-          <MenuTrigger>
-            <Button
-              appearance="subtle"
-              icon={<MoreHorizontalRegular />}
-              aria-label="More options"
-              style={{
-                minWidth: '28px',
-                padding: '4px'
-              }}
-            />
-          </MenuTrigger>
-          <MenuPopover>
-            <MenuList style={{ minWidth: '120px', padding: '4px 0' }}>
-              <MenuItem 
-                onClick={() => onEdit(invoice.Id)}
-                style={{ padding: '6px 12px' }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  width: '100%' 
-                }}>
-                  <EditRegular style={{ fontSize: '16px' }} />
-                  <span>Update</span>
-                </div>
-              </MenuItem>
-              <MenuItem 
-                onClick={() => onDelete(invoice.Id)}
-                style={{ padding: '6px 12px' }}
-              >
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px',
-                  width: '100%' 
-                }}>
-                  <DeleteRegular style={{ fontSize: '16px' }} />
-                  <span>Delete</span>
-                </div>
-              </MenuItem>
-            </MenuList>
-          </MenuPopover>
-        </Menu>
-      </div>
-    </TableCell>
-    <TableCell className={styles.iconCell}>
-      <div className={styles.documentIcon}>
-        <Document24Regular />
-      </div>
-    </TableCell>
-    <TableCell className={styles.tableCell}>
-      <a href={invoice.FileRef} 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className={styles.link}>
-        {invoice.FileLeafRef}
-      </a>
-    </TableCell>
-    <TableCell className={styles.tableCell}>
-      {invoice.InvoiceNumber}
-    </TableCell>
-    <TableCell className={styles.tableCell}>
-      {invoice.CustomerName}
-    </TableCell>
-    <TableCell className={styles.tableCellAmount}>
-      {formatCurrency(invoice.TotalAmount)}
-    </TableCell>
-    <TableCell className={styles.tableCell}>
-      {formatDate(invoice.InvoiceDate)}
-    </TableCell>
-    <TableCell className={styles.tableCell}>
-      {invoice.Status}
-    </TableCell>
-  </TableRow>  
-        
-   
-    
+      key={invoice.Id} 
+      className={mergeClasses(
+        styles.tableRow,
+        styles.hoverRow,
+        isSelected && styles.selectedRow
+      )}
+    >
+      <TableCell className={styles.moreCell}>
+        <FluentProvider theme={webLightTheme}>
+          <div className={styles.moreContainer}>       
+            <Menu>
+              <MenuTrigger>
+                <Button
+                  appearance="subtle"
+                  icon={<MoreHorizontalRegular />}
+                  aria-label="More options"
+                  className={styles.menuButton}
+                />
+              </MenuTrigger>
+
+              <MenuPopover>
+                <MenuList className={styles.menuList}>
+                  <MenuItem
+                    className={styles.menuItem}
+                    onClick={() => onEdit(invoice.Id)}
+                  >
+                    <div className={styles.menuItemContent}>
+                      <EditRegular className={styles.menuIcon} />
+                      <span>Update</span>
+                    </div>
+                  </MenuItem>
+                  <MenuItem
+                    className={styles.menuItem}
+                    onClick={() => onDelete(invoice.Id)}
+                  >
+                    <div className={styles.menuItemContent}>
+                      <DeleteRegular className={styles.menuIcon} />
+                      <span>Delete</span>
+                    </div>
+                  </MenuItem>
+                </MenuList>
+              </MenuPopover>
+            </Menu>
+          </div>
+        </FluentProvider>
+      </TableCell>
+
+      <TableCell className={styles.iconCell}>
+        <div className={styles.documentIcon}>
+          <Document24Regular />
+        </div>
+      </TableCell>
+      <TableCell className={styles.tableCell}>
+        <a href={invoice.FileRef} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className={styles.link}>
+          {invoice.FileLeafRef}
+        </a>
+      </TableCell>
+      <TableCell className={styles.tableCell}>
+        {invoice.InvoiceNumber}
+      </TableCell>
+      <TableCell className={styles.tableCell}>
+        {invoice.CustomerName}
+      </TableCell>
+      <TableCell className={styles.tableCellAmount}>
+        {formatCurrency(invoice.TotalAmount)}
+      </TableCell>
+      <TableCell className={styles.tableCell}>
+        {formatDate(invoice.InvoiceDate)}
+      </TableCell>
+      <TableCell className={styles.tableCell}>
+        {invoice.Status}
+      </TableCell>
+    </TableRow>
   );
 };
 

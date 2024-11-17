@@ -10,40 +10,15 @@ import {
   TableRow,
   TableCell,
   TableBody,
-  //TableCellLayout,  
   makeStyles,
-  //tokens,
   Button,
   Input,
   useId,
-  //Radio,
-  tokens,
-  // Menu,
-  // MenuTrigger,
-  // MenuList,
-  // MenuItem,
-  // MenuPopover,
- // MenuProps
-  //Dialog,
-  //DialogOpenChangeEvent,
- // DialogTrigger,
-  //DialogSurface,
-  //DialogTitle,
-  //DialogBody,
-  //DialogActions,
-  //DialogContent,
-  //Select,
-  //Option,
-  //SelectProps,
-  //Textarea 
+  tokens, 
 } from '@fluentui/react-components';
-import { 
-  //Document24Regular, 
+import {
   AddRegular, Search24Regular, EditRegular, 
-  //DeleteRegular, 
-  //CommentRegular, 
-  //MoreHorizontalRegular 
-} from '@fluentui/react-icons';
+  } from '@fluentui/react-icons';
 import { useInvoices } from '../hooks/useInvoices';
 import { InvoiceTableRow } from './InvoiceTableRow';
 import { UpdateInvoiceDialog } from './UpdateInvoiceDialog';
@@ -385,14 +360,6 @@ interface ICommentInput {
   isSubmitting: boolean;
 }
 
-// Add interface for comment type
-// interface ISharePointComment {
-//   AuthorName: string;
-//   CommentText: string;
-//   Modified: string;
-//   Created: string;
-//   ID: number;
-// }
 // Helper function to format currency
 const formatCurrency = (amount: number | undefined): string => {
   if (amount === null ||amount === undefined) return '$0.00';
@@ -410,8 +377,6 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
   const [searchQuery, setSearchQuery] = React.useState<string>('');
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const [selectedInvoice, setSelectedInvoice] = React.useState<IInvoice | undefined>(undefined);
-
-  //const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = React.useState<IInvoice  | undefined>(undefined);
 
   // Add new state variables at the top with other states
@@ -454,14 +419,6 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
       invoice.Status?.toLowerCase().includes(query)
     );
   }, [invoices, searchQuery]);
-
-  // const handleRadioClick = (invoiceId: number): void => {
-  //   if (selectedInvoiceId === invoiceId) {
-  //     setSelectedInvoiceId(null);
-  //   } else {
-  //     setSelectedInvoiceId(invoiceId);
-  //   }
-  // };
 
   //Create a function to fetch comments
   const fetchComments = async (itemId: number): Promise<void> => {
@@ -554,51 +511,6 @@ const handleStatusChange = (_event: unknown, data: { value: string }): void => {
     comment: data.value === 'Follow-up Required' ? prev.comment : ''
   }));
 };
-const handleStatusSave = async (): Promise<void> => {
-  try {
-    setIsSaving(true);
-    if (selectedInvoice) {
-      await props.sp.web.lists
-        .getByTitle(props.libraryName)
-        .items.getById(selectedInvoice.Id)
-        .update({
-          Status: selectedStatus
-        });
-      
-      // Refresh the list
-      await refreshInvoices();
-      handleCloseUpdateDialog();
-    }
-  } catch (error) {
-    console.error('Error updating status:', error);
-  } finally {
-    setIsSaving(false);
-  }
-};
-// const handleCommentChange = (comment: string): void => {
-//   setCommentInput(prev => ({
-//     ...prev,
-//     comment
-//   }));
-// };
-
-// Update useEffect to handle initial status
-React.useEffect(() => {
-  if (isUpdateDialogOpen && selectedInvoice) {
-    const invoice = filteredInvoices.find(inv => inv.Id === selectedInvoice.Id);
-    if (invoice) {
-      console.log('Setting initial status:', invoice.Status); // Debug log
-      setSelectedStatus(invoice.Status);
-
-      // Set comment input visibility based on the current status
-      setCommentInput(prev => ({
-        ...prev,
-        showInput: invoice.Status === 'Follow-up Required',
-      }));
-    }
-  }
-}, [isUpdateDialogOpen, selectedInvoice]);
-
 // 5. Update the handleCloseUpdateDialog
 const handleCloseUpdateDialog = (): void => {
   setIsUpdateDialogOpen(false);
@@ -616,6 +528,56 @@ const handleCloseUpdateDialog = (): void => {
   }, 100);
 };
 
+const handleStatusSave = async (): Promise<void> => {
+  try {
+    setIsSaving(true);
+    if (selectedInvoice) {
+      await props.sp.web.lists
+        .getByTitle(props.libraryName)
+        .items.getById(selectedInvoice.Id)
+        .update({
+          Status: selectedStatus
+        });
+      
+      const comment = `Customer (${selectedInvoice.CustomerName}) - Invoice #${selectedInvoice.InvoiceNumber} status updated to  ${selectedStatus}.`
+      
+      await props.sp.web.lists
+        .getByTitle(props.libraryName)
+        .items.getById(selectedInvoice.Id)
+        .comments.add(comment);
+      
+        // Refresh the list
+      await refreshInvoices();
+      handleCloseUpdateDialog();
+    }
+  } catch (error) {
+    console.error('Error updating status:', error);
+  } finally {
+    setIsSaving(false);
+  }
+};
+// Update useEffect to handle initial status
+React.useEffect(() => {
+  if (isUpdateDialogOpen && selectedInvoice) {
+    const invoice = filteredInvoices.find(inv => inv.Id === selectedInvoice.Id);
+    if (invoice) {
+      console.log('Setting initial status:', invoice.Status); // Debug log
+      setSelectedStatus(invoice.Status);
+
+      // Set comment input visibility based on the current status
+      setCommentInput(prev => ({
+        ...prev,
+        showInput: invoice.Status === 'Follow-up Required',
+      }));
+    }
+  }
+}, [isUpdateDialogOpen, selectedInvoice]);
+
+// Add dialog close handler
+const handleCloseDialog = (): void => {
+  //setIsDeleteDialogOpen(false);
+  setInvoiceToDelete(undefined);
+};
 
   // Update the delete handler
   const handleDelete = (invoiceId: number): void => {
@@ -649,13 +611,6 @@ const handleConfirmDelete = async (): Promise<void> => {
     handleCloseDialog();
   }
 };
-
-// Add dialog close handler
-const handleCloseDialog = (): void => {
-  //setIsDeleteDialogOpen(false);
-  setInvoiceToDelete(undefined);
-};
-
   const handleEditStatus = (): void => {
     // Implement status edit functionality
     console.log('Edit status for invoice:', selectedInvoice?.Id);
@@ -674,18 +629,6 @@ const handleCloseDialog = (): void => {
       console.error('Error saving invoice:', error);
     }
   };
-
-  // const handleDialogOpenChange = (_: DialogOpenChangeEvent, data: { open: boolean }): void => {
-  //   if (!data.open) {
-  //     handleCloseDialog();
-  //   }
-  // };
-  
-  // const handleUpdateDialogOpenChange = (_: DialogOpenChangeEvent, data: { open: boolean }): void => {
-  //   if (!data.open) {
-  //     handleCloseUpdateDialog();
-  //   }
-  // };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
@@ -722,112 +665,6 @@ const handleCloseDialog = (): void => {
   const calculateFilteredTotal = (): number => {
     return filteredInvoices.reduce((sum, invoice) => sum + (invoice.TotalAmount || 0), 0);
   };
-   // Create context menu items
-  //  const menuItems = [
-  //   {
-  //     key: 'edit',
-  //     label: 'Update',
-  //     icon: <EditRegular />,
-  //     onClick: (invoiceId: number) =>  handleEdit(invoiceId)
-  //   },
-  //   {
-  //     key: 'delete',
-  //     label: 'Delete',
-  //     icon: <DeleteRegular />,
-  //     onClick: (invoiceId: number) => handleDelete(invoiceId)
-  //   }
-  // ];
-// Modify the table row rendering to include context menu
-// const renderTableRow = (invoice: IInvoice) : JSX.Element  => {
-//   const isSelected = selectedInvoiceId === invoice.Id;
-  
-//   return (
-//      <TableRow 
-//     key={invoice.Id} 
-//     className={`${styles.tableRow} ${styles.hoverRow} ${isSelected ? styles.selectedRow : ''}`}
-//   >
-//     <TableCell className={styles.moreCell}>
-//       <div className={styles.moreContainer}>
-//       <Menu>
-//           <MenuTrigger>
-//             <Button
-//               appearance="subtle"
-//               icon={<MoreHorizontalRegular />}
-//               aria-label="More options"
-//               style={{
-//                 minWidth: '28px',
-//                 padding: '4px'
-//               }}
-//             />
-//           </MenuTrigger>
-//           <MenuPopover>
-//             <MenuList style={{ minWidth: '120px', padding: '4px 0' }}>
-//               <MenuItem 
-//                 onClick={() => handleEdit(invoice.Id)}
-//                 style={{ padding: '6px 12px' }}
-//               >
-//                 <div style={{ 
-//                   display: 'flex', 
-//                   alignItems: 'center', 
-//                   gap: '8px',
-//                   width: '100%' 
-//                 }}>
-//                   <EditRegular style={{ fontSize: '16px' }} />
-//                   <span>Update</span>
-//                 </div>
-//               </MenuItem>
-//               <MenuItem 
-//                 onClick={() => handleDelete(invoice.Id)}
-//                 style={{ padding: '6px 12px' }}
-//               >
-//                 <div style={{ 
-//                   display: 'flex', 
-//                   alignItems: 'center', 
-//                   gap: '8px',
-//                   width: '100%' 
-//                 }}>
-//                   <DeleteRegular style={{ fontSize: '16px' }} />
-//                   <span>Delete</span>
-//                 </div>
-//               </MenuItem>
-//             </MenuList>
-//           </MenuPopover>
-//         </Menu>
-//       </div>
-//     </TableCell>
-//     <TableCell className={styles.iconCell}>
-//       <div className={styles.documentIcon}>
-//         <Document24Regular />
-//       </div>
-//     </TableCell>
-//     <TableCell className={styles.tableCell}>
-//       <a href={invoice.FileRef} 
-//         target="_blank" 
-//         rel="noopener noreferrer"
-//         className={styles.link}>
-//         {invoice.FileLeafRef}
-//       </a>
-//     </TableCell>
-//     <TableCell className={styles.tableCell}>
-//       {invoice.InvoiceNumber}
-//     </TableCell>
-//     <TableCell className={styles.tableCell}>
-//       {invoice.CustomerName}
-//     </TableCell>
-//     <TableCell className={styles.tableCellAmount}>
-//       {formatCurrency(invoice.TotalAmount)}
-//     </TableCell>
-//     <TableCell className={styles.tableCell}>
-//       {formatDate(invoice.InvoiceDate)}
-//     </TableCell>
-//     <TableCell className={styles.tableCell}>
-//       {invoice.Status}
-//     </TableCell>
-//   </TableRow>
-      
-    
-//   );
-// };
 
 return (
   <FluentProvider theme={webLightTheme}>
@@ -931,7 +768,6 @@ return (
       formatCurrency={formatCurrency}
       formatDate={formatDate}
     />
-
     <UpdateInvoiceDialog 
         isOpen={isUpdateDialogOpen}
         selectedInvoice={selectedInvoice}
@@ -952,139 +788,6 @@ return (
         formatCurrency={formatCurrency}
         formatDate={formatDate}
       />
-{/* // Add the Update Status Dialog component before the closing FluentProvider tag // 2. Update the Select component in the Dialog*/}
-
-{/* Update the Dialog with the fixed Select implementation */}
-    {/* <Dialog 
-      open={isUpdateDialogOpen} 
-      onOpenChange={handleUpdateDialogOpenChange}
-    >
-      <DialogSurface>
-        <DialogBody>
-          <DialogTitle>Update Status</DialogTitle>
-          <DialogContent>
-            <div className={styles.dialogContent}>
-                {selectedInvoiceId && (
-                  <div className={styles.invoiceInfoSection}>
-                    <div className={styles.infoGrid}>
-                      <div className={styles.infoItem}>
-                        <span className={styles.infoLabel}>Invoice Number</span>
-                        <span className={styles.infoValue}>
-                          {filteredInvoices.find(inv => inv.Id === selectedInvoiceId)?.InvoiceNumber || '-'}
-                        </span>
-                      </div>
-                      <div className={styles.infoItem}>
-                        <span className={styles.infoLabel}>Customer Name</span>
-                        <span className={styles.infoValue}>
-                          {filteredInvoices.find(inv => inv.Id === selectedInvoiceId)?.CustomerName || '-'}
-                        </span>
-                      </div>
-                      <div className={styles.infoItem}>
-                        <span className={styles.infoLabel}>Invoice Date</span>
-                        <span className={styles.infoValue}>
-                          {formatDate(filteredInvoices.find(inv => inv.Id === selectedInvoiceId)?.InvoiceDate || '')}
-                        </span>
-                      </div>
-                      <div className={styles.infoItem}>
-                        <span className={styles.infoLabel}>Total Amount</span>
-                        <span className={styles.infoValue}>
-                          {formatCurrency(filteredInvoices.find(inv => inv.Id === selectedInvoiceId)?.TotalAmount)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-            <Select
-                value={selectedStatus}
-                onChange={handleStatusChange as SelectProps["onChange"]}
-                className={styles.select}
-              >
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </Select>
-              {commentInput.showInput && (
-                  <div className={styles.commentInputContainer}>
-                    <Textarea
-                      placeholder="Add a comment..."
-                      value={commentInput.comment}
-                      onChange={(e) => setCommentInput(prev => ({
-                        ...prev,
-                        comment: e.target.value
-                      }))}
-                      resize="vertical"
-                      className={styles.commentTextarea}
-                    />
-                    <div className={styles.commentButtonContainer}>
-                        <Button
-                          appearance="primary"
-                          onClick={handleCommentSubmit}
-                          disabled={!commentInput.comment.trim() || commentInput.isSubmitting}
-                          className={styles.commentButton}
-                        >
-                          {commentInput.isSubmitting ? 'Saving...' : 'Comment'}
-                        </Button>
-                    </div>
-                  </div>
-                )}
-              <div className={styles.commentsSection}>
-                <div className={styles.commentsLabel}>Comments History</div>
-                {loadingComments ? (
-                  <div className={styles.noComments}>Loading comments...</div>
-                ) : (
-                  <>
-                    {itemComments.length > 0 ? (
-                        <div className={`${styles.commentsContainer} ${itemComments.length > 3 ? styles.commentsContainerExpanded : ''}`}>
-                          {itemComments
-                            .sort((a, b) => 
-                              new Date(b.createdDate || '').getTime() - new Date(a.createdDate || '').getTime()
-                            )
-                            .map((comment, index) => (
-                              <div key={comment.id || index} className={styles.commentItem}>
-                                <div className={styles.commentAuthor}>
-                                  {comment.author?.name || 'Unknown'}
-                                </div>
-                                <div className={styles.commentText}>{comment.text}</div>
-                                <div className={styles.commentDate}>
-                                  {formatDate(comment.createdDate || '')}
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                        ) : (
-                        <div className={styles.noComments}>No comments available</div>
-                      )}
-                  </>
-                )}
-              </div>
-
-            </div>
-          </DialogContent>
-          <DialogActions>
-            <Button 
-              appearance="secondary" 
-              onClick={handleCloseUpdateDialog}
-            >
-              Cancel
-            </Button>
-            <Button
-                appearance="primary"
-                onClick={handleStatusSave}
-                disabled={
-                  !selectedStatus || 
-                  (selectedStatus === (filteredInvoices.find(inv => inv.Id === selectedInvoiceId)?.Status)) ||
-                  isSaving
-                }
-              >
-                {isSaving ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogActions>
-        </DialogBody>
-      </DialogSurface>
-    </Dialog> */}
-
   </FluentProvider>
 );
 };
