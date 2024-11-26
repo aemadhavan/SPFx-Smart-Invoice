@@ -65,13 +65,13 @@ const useStyles = makeStyles({
     width: '100%',
     minHeight: '80px',
   },
-  commentButtonContainer: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-  },
-  commentButton: {
-    minWidth: '80px',
-  },
+  // commentButtonContainer: {
+  //   display: 'flex',
+  //   justifyContent: 'flex-end',
+  // },
+  // commentButton: {
+  //   minWidth: '80px',
+  // },
   commentsSection: {
     marginTop: '16px',
     borderTop: `1px solid ${tokens.colorNeutralStroke1}`,
@@ -84,7 +84,7 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground2,
   },
   commentsContainer: {
-    maxHeight: '300px',
+    maxHeight: '150px',
     overflowY: 'auto',
     marginTop: '8px',
     '&::-webkit-scrollbar': {
@@ -158,7 +158,7 @@ interface UpdateInvoiceDialogProps {
   onClose: () => void;
   onStatusChange: (_event: unknown, data: { value: string }) => void;
   onCommentChange: (comment: string) => void;
-  onCommentSubmit: () => Promise<void>;
+  //onCommentSubmit: () => Promise<void>;
   onStatusSave: () => Promise<void>;
   formatCurrency: (amount: number | undefined) => string;
   formatDate: (date: string) => string;
@@ -176,7 +176,7 @@ export const UpdateInvoiceDialog: React.FC<UpdateInvoiceDialogProps> = ({
   onClose,
   onStatusChange,
   onCommentChange,
-  onCommentSubmit,
+  //onCommentSubmit,
   onStatusSave,
   formatCurrency,
   formatDate,
@@ -187,6 +187,9 @@ export const UpdateInvoiceDialog: React.FC<UpdateInvoiceDialogProps> = ({
     if (!data.open) {
       onClose();
     }
+  };
+  const hasChanges = (): boolean => {
+    return selectedStatus !== selectedInvoice?.Status || commentInput.comment.trim() !== '';
   };
 
   return (
@@ -240,7 +243,7 @@ export const UpdateInvoiceDialog: React.FC<UpdateInvoiceDialogProps> = ({
                 ))}
               </Select>
 
-              {commentInput.showInput && (
+              {/* {commentInput.showInput && ( */}
                 <div className={styles.commentInputContainer}>
                   <Textarea
                     placeholder="Add a comment..."
@@ -249,7 +252,7 @@ export const UpdateInvoiceDialog: React.FC<UpdateInvoiceDialogProps> = ({
                     resize="vertical"
                     className={styles.commentTextarea}
                   />
-                  <div className={styles.commentButtonContainer}>
+                  {/* <div className={styles.commentButtonContainer}>
                     <Button
                       appearance="primary"
                       onClick={onCommentSubmit}
@@ -258,9 +261,9 @@ export const UpdateInvoiceDialog: React.FC<UpdateInvoiceDialogProps> = ({
                     >
                       {commentInput.isSubmitting ? 'Saving...' : 'Comment'}
                     </Button>
-                  </div>
+                  </div> */}
                 </div>
-              )}
+              {/* )} */}
 
               <div className={styles.commentsSection}>
                 <div className={styles.commentsLabel}>Comments History</div>
@@ -302,8 +305,7 @@ export const UpdateInvoiceDialog: React.FC<UpdateInvoiceDialogProps> = ({
               appearance="primary"
               onClick={onStatusSave}
               disabled={
-                !selectedStatus ||
-                (selectedStatus === selectedInvoice?.Status) ||
+                !hasChanges()  ||                
                 isSaving
               }
             >

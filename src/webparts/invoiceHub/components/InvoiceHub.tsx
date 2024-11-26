@@ -29,6 +29,7 @@ import { ICommentInfo } from "@pnp/sp/comments";
 import "@pnp/sp/comments/item";
 import "@pnp/sp/webs";
 import "@pnp/sp/items";
+//import RevenueOverview from './RevenueOverview';
 
 // Define custom styles
 const useStyles = makeStyles({
@@ -444,36 +445,36 @@ export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
     }
   };
 // Add this new function to handle comment submission
-  const handleCommentSubmit = async (): Promise<void> => {
-    if (!selectedInvoice || !commentInput.comment.trim()) return;
+  // const handleCommentSubmit = async (): Promise<void> => {
+  //   if (!selectedInvoice || !commentInput.comment.trim()) return;
 
-    try {
-      setCommentInput(prev => ({ ...prev, isSubmitting: true }));
+  //   try {
+  //     setCommentInput(prev => ({ ...prev, isSubmitting: true }));
       
-      // Initialize the SPFx context
-      const sp = spfi().using(SPFx(props.context));
+  //     // Initialize the SPFx context
+  //     const sp = spfi().using(SPFx(props.context));
       
-      // Add the comment to the item
-      await sp.web.lists
-        .getByTitle(props.libraryName)
-        .items.getById(selectedInvoice.Id)
-        .comments.add(commentInput.comment.trim());
+  //     // Add the comment to the item
+  //     await sp.web.lists
+  //       .getByTitle(props.libraryName)
+  //       .items.getById(selectedInvoice.Id)
+  //       .comments.add(commentInput.comment.trim());
 
-      // Refresh comments
-      await fetchComments(selectedInvoice.Id);
+  //     // Refresh comments
+  //     await fetchComments(selectedInvoice.Id);
       
-      // Clear the comment input
-      setCommentInput(prev => ({
-        ...prev,
-        comment: '',
-        isSubmitting: false
-      }));
+  //     // Clear the comment input
+  //     setCommentInput(prev => ({
+  //       ...prev,
+  //       comment: '',
+  //       isSubmitting: false
+  //     }));
 
-    } catch (error) {
-      console.error('Error submitting comment:', error);
-      setCommentInput(prev => ({ ...prev, isSubmitting: false }));
-    }
-  };
+  //   } catch (error) {
+  //     console.error('Error submitting comment:', error);
+  //     setCommentInput(prev => ({ ...prev, isSubmitting: false }));
+  //   }
+  // };
   // Add handlers for context menu actions
   // Update the handleEdit function
 // 1. First, update the handleEdit function to ensure it sets the initial state correctly
@@ -506,7 +507,7 @@ const handleStatusChange = (_event: unknown, data: { value: string }): void => {
   // Show comment input if status is "Follow-up Required"
   setCommentInput(prev => ({
     ...prev,
-    showInput: data.value === 'Follow-up Required',
+    showInput: true,//data.value === 'Follow-up Required',
     // Maintain existing comment if the status changes back to Follow-up Required
     comment: data.value === 'Follow-up Required' ? prev.comment : ''
   }));
@@ -531,25 +532,55 @@ const handleCloseUpdateDialog = (): void => {
 const handleStatusSave = async (): Promise<void> => {
   try {
     setIsSaving(true);
-    if (selectedInvoice) {
+    if (!selectedInvoice) return;
+    commentInput.showInput = true;
+    const hasStatusChanged = selectedStatus !== selectedInvoice.Status;
+    const hasComment = commentInput.showInput && commentInput.comment.trim() !== '';
+
+    // If nothing has changed, just return
+    if (!hasStatusChanged && !hasComment) return;
+
+    // Update status if it has changed
+    if (hasStatusChanged) {
       await props.sp.web.lists
         .getByTitle(props.libraryName)
         .items.getById(selectedInvoice.Id)
         .update({
           Status: selectedStatus
         });
-      
-      const comment = `Customer (${selectedInvoice.CustomerName}) - Invoice #${selectedInvoice.InvoiceNumber} status updated to  ${selectedStatus}.`
-      
-      await props.sp.web.lists
-        .getByTitle(props.libraryName)
-        .items.getById(selectedInvoice.Id)
-        .comments.add(comment);
-      
-        // Refresh the list
-      await refreshInvoices();
-      handleCloseUpdateDialog();
     }
+
+    // Add comment if there is one (either user comment or status change)
+    if (hasStatusChanged || hasComment) {
+      let commentText = '';
+
+      // Add status change notification if status changed
+      if (hasStatusChanged) {
+        commentText = `Status updated to ${selectedStatus}`;
+      }
+
+      // Add user comment if provided
+      if (hasComment) {
+        commentText = hasStatusChanged 
+          ? `${commentText}\n\n${commentInput.comment.trim()}`
+          : commentInput.comment.trim();
+      }
+
+      // Add the comment if we have text to add
+      if (commentText) {
+        await props.sp.web.lists
+          .getByTitle(props.libraryName)
+          .items.getById(selectedInvoice.Id)
+          .comments.add(commentText);
+      }
+    }
+
+    // Refresh the list only if something was updated
+    if (hasStatusChanged || hasComment) {
+      await refreshInvoices();
+    }
+    
+    handleCloseUpdateDialog();
   } catch (error) {
     console.error('Error updating status:', error);
   } finally {
@@ -751,6 +782,7 @@ return (
         </TableBody>
       </Table>
     </div>
+    {/* <RevenueOverview invoices={filteredInvoices} formatCurrency={formatCurrency} /> */}
     <CreateInvoiceDrawer 
       isOpen={isDrawerOpen}
       onDismiss={handleDrawerDismiss}
@@ -783,7 +815,7 @@ return (
           ...prev,
           comment
         }))}
-        onCommentSubmit={handleCommentSubmit}
+        //onCommentSubmit={handleCommentSubmit}
         onStatusSave={handleStatusSave}
         formatCurrency={formatCurrency}
         formatDate={formatDate}
