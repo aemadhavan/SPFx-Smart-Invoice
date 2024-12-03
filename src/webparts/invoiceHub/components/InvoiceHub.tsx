@@ -370,7 +370,8 @@ const formatCurrency = (amount: number | undefined): string => {
 const STATUS_OPTIONS = [
   'Invoice Sent',
   'Paid',
-  'Follow-up Required'
+  'Follow-up Required',
+  'Invalid Invoice'
 ] as const;
 
 export const InvoiceHub: React.FC<IInvoiceHubProps> = (props): JSX.Element => {
@@ -694,7 +695,13 @@ const handleConfirmDelete = async (): Promise<void> => {
     }
   };
   const calculateFilteredTotal = (): number => {
-    return filteredInvoices.reduce((sum, invoice) => sum + (invoice.TotalAmount || 0), 0);
+    return filteredInvoices.reduce((sum, invoice) => {
+      // Only include amount if status is not 'Invalid Invoice'
+      if (invoice.Status !== 'Invalid Invoice') {
+        return sum + (invoice.TotalAmount || 0);
+      }
+      return sum;
+    }, 0);
   };
 
 return (

@@ -131,6 +131,14 @@ const useStyles = makeStyles({
     padding: '8px 12px',
     textAlign: 'right',
   },
+  invalidAmount: {
+    padding: '8px 12px',
+    textAlign: 'right',
+    '& > span': {
+      textDecoration: 'line-through',
+      color: tokens.colorNeutralForeground3,
+    }
+  },
   link: {
     color: tokens.colorBrandForeground1,
     textDecoration: 'none',
@@ -230,8 +238,8 @@ export const InvoiceTableRow: React.FC<InvoiceTableRowProps> = ({
       <TableCell className={styles.tableCell}>
         {invoice.CustomerName}
       </TableCell>
-      <TableCell className={styles.tableCellAmount}>
-        {formatCurrency(invoice.TotalAmount)}
+      <TableCell className={invoice.Status === 'Invalid Invoice' ? styles.invalidAmount : styles.tableCellAmount}>
+        <span>{formatCurrency(invoice.TotalAmount)}</span>
       </TableCell>
       <TableCell className={styles.tableCell}>
         {formatDate(invoice.InvoiceDate)}
