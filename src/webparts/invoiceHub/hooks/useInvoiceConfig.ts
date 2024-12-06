@@ -25,14 +25,19 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
   const [config, setConfig] = useState<IConfig>();
   const [configId, setConfigId] = useState<number>(0);
+  const [invoiceFormat, setInvoiceFormat] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<Error | undefined>(undefined);
 
   // Format invoice number
   const formatInvoiceNumber = (number: string): string => {
-    return `AHL-${number.padStart(3, '0')}/${new Date().getFullYear()}`;
+    if (!invoiceFormat) return number;
+    
+    const year = new Date().getFullYear().toString();
+    return invoiceFormat
+      .replace('{RunningNumber}', number.padStart(3, '0'))
+      .replace('{Year}', year);
   };
-
   // Get Config
   const getConfig = useCallback(async () => {
     // Your implementation here
@@ -45,6 +50,9 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
               acc[item.Title] = item.Value;
               return acc;
           }, {} as Record<string, string>);
+      // Store the invoice format
+      setInvoiceFormat(configMap.InvoiceNumberFormat || 'ICS-{RunningNumber}/{Year}');
+
       const configItem: IConfig = {
             CompanyName: configMap.CompanyName || "",
             CompanyAddress: configMap.CompanyAddress || "",
@@ -75,6 +83,18 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
     setIsLoading(true);
     setError(undefined);
     try {
+       // First ensure we have the format
+       if (!invoiceFormat) {
+        const formatItems = await sp.web.lists
+          .getByTitle("Config")
+          .items
+          .filter("Title eq 'InvoiceNumberFormat'")();
+        
+        if (formatItems && formatItems.length > 0) {
+          setInvoiceFormat(formatItems[0].Value);
+        }
+      }
+
       const configItems: IConfigItem[] = await sp.web.lists
         .getByTitle("Config")
         .items
@@ -90,7 +110,7 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [sp]);
+  }, [sp,invoiceFormat]);
 
   // Increment invoice number
   const incrementInvoiceNumber = useCallback(async () => {
@@ -101,8 +121,13 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
         throw new Error('Config ID not found');
       }
 
-      const currentNum = parseInt(invoiceNumber.split('-')[1].split('/')[0]);
-      const nextNumber = (currentNum + 1).toString();
+      // Extract the running number from the current invoice number
+      const runningNumber = invoiceNumber.match(/\d+/)?.[0];
+      if (!runningNumber) {
+        throw new Error('Could not extract running number from invoice number');
+      }
+
+      const nextNumber = (parseInt(runningNumber) + 1).toString();
 
       await sp.web.lists
         .getByTitle("Config")
@@ -119,7 +144,7 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [sp, configId, invoiceNumber]);
+  }, [sp, configId, invoiceNumber,invoiceFormat]);
 
   return {
     invoiceNumber,
