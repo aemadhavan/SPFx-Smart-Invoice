@@ -30,71 +30,76 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
   const [error, setError] = useState<Error | undefined>(undefined);
 
   // Format invoice number
-  const formatInvoiceNumber = (number: string): string => {
-    if (!invoiceFormat) return number;
-    
+  const formatInvoiceNumber = (number: string, format: string): string => {
     const year = new Date().getFullYear().toString();
-    return invoiceFormat
+    return format
       .replace('{RunningNumber}', number.padStart(3, '0'))
       .replace('{Year}', year);
   };
-  // Get Config
+
+  // Get Config including invoice format
   const getConfig = useCallback(async () => {
-    // Your implementation here
-    try{
+    try {
+      setIsLoading(true);
       const items = await sp.web.lists
-                .getByTitle("Config")
-                .items
-                .select("Title", "Value")();
+        .getByTitle("Config")
+        .items
+        .select("Title", "Value")();
+
       const configMap = items.reduce((acc, item) => {
-              acc[item.Title] = item.Value;
-              return acc;
-          }, {} as Record<string, string>);
+        acc[item.Title] = item.Value;
+        return acc;
+      }, {} as Record<string, string>);
+
       // Store the invoice format
-      setInvoiceFormat(configMap.InvoiceNumberFormat || 'ICS-{RunningNumber}/{Year}');
+      const format = configMap.InvoiceNumberFormat || 'ISC-{RunningNumber}/{Year}';
+      setInvoiceFormat(format);
 
       const configItem: IConfig = {
-            CompanyName: configMap.CompanyName || "",
-            CompanyAddress: configMap.CompanyAddress || "",
-            Suburb: configMap.Suburb || "",
-            City: configMap.City || "",
-            CompanyTel: configMap.CompanyTel || "",
-            CompanyEmail: configMap.CompanyEmail || "",
-            GSTNo: configMap.GSTNo || "",
-            BankName: configMap.BankName || "",
-            BankAccountNo: configMap.AccountNo || "",
-            PaymentTerms: configMap.PaymentTerms || "",
-            EmailToCustomer: (configMap.EmailToCustomer==="No")?false:true,
-        };
-        setConfig(configItem);
-        setError(undefined);
-    }
-    catch (error) {
-      console.error('Error fetching config:', error)
-      throw error
-    }
-    finally {
+        CompanyName: configMap.CompanyName || "",
+        CompanyAddress: configMap.CompanyAddress || "",
+        Suburb: configMap.Suburb || "",
+        City: configMap.City || "",
+        CompanyTel: configMap.CompanyTel || "",
+        CompanyEmail: configMap.CompanyEmail || "",
+        GSTNo: configMap.GSTNo || "",
+        BankName: configMap.BankName || "",
+        BankAccountNo: configMap.AccountNo || "",
+        PaymentTerms: configMap.PaymentTerms || "",
+        EmailToCustomer: (configMap.EmailToCustomer === "No") ? false : true,
+      };
+      setConfig(configItem);
+      setError(undefined);
+
+      // After getting config, update the invoice number with the correct format
+      if (configMap.InvoiceRunningNumber) {
+        const formattedNumber = formatInvoiceNumber(configMap.InvoiceRunningNumber, format);
+        setInvoiceNumber(formattedNumber);
+        // Store the config ID for the running number
+        const runningNumberItem = items.find(item => item.Title === 'InvoiceRunningNumber');
+        if (runningNumberItem) {
+          setConfigId(runningNumberItem.Id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching config:', error);
+      throw error;
+    } finally {
       setIsLoading(false);
     }
-  },[sp]);
+  }, [sp]);
 
-  // Get invoice number from config
+  // Get invoice number
   const getInvoiceNumber = useCallback(async () => {
+    if (!invoiceFormat) {
+      // If no format is set, get the config first
+      await getConfig();
+      return;
+    }
+
     setIsLoading(true);
     setError(undefined);
     try {
-       // First ensure we have the format
-       if (!invoiceFormat) {
-        const formatItems = await sp.web.lists
-          .getByTitle("Config")
-          .items
-          .filter("Title eq 'InvoiceNumberFormat'")();
-        
-        if (formatItems && formatItems.length > 0) {
-          setInvoiceFormat(formatItems[0].Value);
-        }
-      }
-
       const configItems: IConfigItem[] = await sp.web.lists
         .getByTitle("Config")
         .items
@@ -103,30 +108,31 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
       if (configItems && configItems.length > 0) {
         const currentNumber = configItems[0].Value;
         setConfigId(configItems[0].Id);
-        setInvoiceNumber(formatInvoiceNumber(currentNumber));
+        setInvoiceNumber(formatInvoiceNumber(currentNumber, invoiceFormat));
       }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch invoice number'));
     } finally {
       setIsLoading(false);
     }
-  }, [sp,invoiceFormat]);
+  }, [sp, invoiceFormat, getConfig]);
 
   // Increment invoice number
   const incrementInvoiceNumber = useCallback(async () => {
+    if (!invoiceFormat || !configId) {
+      throw new Error('Invoice format or Config ID not found');
+    }
+
     setIsLoading(true);
     setError(undefined);
     try {
-      if (!configId) {
-        throw new Error('Config ID not found');
-      }
-
       // Extract the running number from the current invoice number
-      const runningNumber = invoiceNumber.match(/\d+/)?.[0];
-      if (!runningNumber) {
+      const match = invoiceNumber.match(/\d+/);
+      if (!match) {
         throw new Error('Could not extract running number from invoice number');
       }
 
+      const runningNumber = match[0];
       const nextNumber = (parseInt(runningNumber) + 1).toString();
 
       await sp.web.lists
@@ -137,14 +143,14 @@ export const useInvoiceConfig = (sp: SPFI): IUseInvoiceConfigReturn => {
           Value: nextNumber
         });
 
-      setInvoiceNumber(formatInvoiceNumber(nextNumber));
+      setInvoiceNumber(formatInvoiceNumber(nextNumber, invoiceFormat));
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to increment invoice number'));
       throw err;
     } finally {
       setIsLoading(false);
     }
-  }, [sp, configId, invoiceNumber,invoiceFormat]);
+  }, [sp, configId, invoiceNumber, invoiceFormat]);
 
   return {
     invoiceNumber,
