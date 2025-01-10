@@ -20,13 +20,59 @@ export const useInvoices = (sp: SPFI, listName: string):{
   const fetchInvoices = useCallback(async () => {
     try {
       setLoading(true);
-      const items: IInvoice[] = await sp.web.lists
-        .getByTitle(listName)
-        .items
-        .select('Id,Title,InvoiceNumber,CustomerName,TotalAmount,InvoiceDate,Status,FileRef,FileLeafRef')
-        .orderBy('Created', false)();
+      
+      // Get the list information first
+      const list = sp.web.lists.getByTitle(listName);
+      const listInfo = await list.select('ItemCount')();
+      const totalItems = listInfo.ItemCount;
 
-      setInvoices(items);
+      let allItems: IInvoice[] = [];
+      console.log('Total items:', totalItems);
+      if (totalItems <= 5000) {
+        // For lists under 5000 items, use simple fetch
+        allItems = await list.items
+          .select('Id,Title,InvoiceNumber,CustomerName,TotalAmount,InvoiceDate,Status,FileRef,FileLeafRef')
+          .orderBy('Created', false)
+          .top(5000)();
+      } else {
+        // For large lists, use batched fetching with indexed column
+        const batchSize = 4500;
+        let processed = 0;
+
+        // Get the most recent Created date
+        const newestItem = await list.items
+          .select('Created')
+          .orderBy('Created', false)
+          .top(1)();
+
+        if (newestItem && newestItem.length > 0) {
+          // Convert SharePoint date string to Date object
+          let lastCreatedDate = new Date(newestItem[0].Created);
+
+          while (processed < totalItems) {
+            // Format the date for SharePoint REST filter
+            const formattedDate = lastCreatedDate.toISOString();
+            
+            const batch = await list.items
+              .select('Id,Title,InvoiceNumber,CustomerName,TotalAmount,InvoiceDate,Status,FileRef,FileLeafRef,Created')
+              .filter(`Created le datetime'${formattedDate}'`)
+              .orderBy('Created', false)
+              .top(batchSize)();
+
+            if (batch.length === 0) break;
+
+            allItems = [...allItems, ...batch];
+            processed += batch.length;
+
+            if (batch.length === batchSize) {
+              // Update lastCreatedDate for next iteration
+              lastCreatedDate = new Date(batch[batch.length - 1].Created);
+            }
+          }
+        }
+      }
+
+      setInvoices(allItems);
       setError(undefined);
     } catch (err) {
       console.error('Error fetching invoices:', err);
@@ -36,9 +82,8 @@ export const useInvoices = (sp: SPFI, listName: string):{
     }
   }, [sp, listName]);
 
-  // Initial fetch with proper promise handling
   useEffect(() => {
-    let isMounted = true; // Flag to check if component is still mounted
+    let isMounted = true;
     const initFetch = async (): Promise<void> => {
       try {
         if (isMounted) {
@@ -52,7 +97,6 @@ export const useInvoices = (sp: SPFI, listName: string):{
       }
     };
 
-    // Call initFetch and handle any potential errors
     initFetch().catch((err) => {
       console.error('Unhandled error in initFetch:', err);
       if (isMounted) {
@@ -60,20 +104,17 @@ export const useInvoices = (sp: SPFI, listName: string):{
       }
     });
     
-    // Cleanup function
     return () => {
       isMounted = false;
     };
   }, [fetchInvoices]);
-  
 
-  // Expose the refresh function
   const refreshInvoices = useCallback(async (): Promise<void> => {
     try {
       await fetchInvoices();
     } catch (err) {
       console.error('Error refreshing invoices:', err);
-      throw err; // Re-throw the error to be handled by the caller
+      throw err;
     }
   }, [fetchInvoices]);
 
